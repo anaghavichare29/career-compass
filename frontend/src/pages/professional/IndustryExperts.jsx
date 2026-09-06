@@ -1,5 +1,5 @@
 import { useState } from "react";
-import "./industry-experts.css";
+import "./IndustryExperts.css";
 
 const expertsData = [
   {
@@ -10,7 +10,7 @@ const expertsData = [
     domain: "AI / Machine Learning",
     experience: "6+ Years Experience",
     initials: "PS",
-    bio: "Software engineer specializing in machine learning and scalable AI applications.",
+    bio: "Software engineer specializing in machine learning and scalable AI applications."
   },
   {
     id: 2,
@@ -20,7 +20,7 @@ const expertsData = [
     domain: "Data Science",
     experience: "8+ Years Experience",
     initials: "RM",
-    bio: "Data scientist working on analytics, predictive modelling and data-driven products.",
+    bio: "Data scientist working on analytics, predictive modelling and data-driven products."
   },
   {
     id: 3,
@@ -30,7 +30,7 @@ const expertsData = [
     domain: "Product Management",
     experience: "7+ Years Experience",
     initials: "NS",
-    bio: "Product professional focused on building user-centric digital products and strategies.",
+    bio: "Product professional focused on building user-centric digital products and strategies."
   },
   {
     id: 4,
@@ -40,17 +40,17 @@ const expertsData = [
     domain: "Cybersecurity",
     experience: "5+ Years Experience",
     initials: "AK",
-    bio: "Cybersecurity professional working on application security and threat detection.",
+    bio: "Cybersecurity professional working on application security and threat detection."
   },
   {
     id: 5,
     name: "Aisha Khan",
     role: "Cloud Engineer",
-    company: "AWS",
+    company: "Amazon Web Services",
     domain: "Cloud Computing",
     experience: "6+ Years Experience",
     initials: "AK",
-    bio: "Cloud engineer specializing in cloud architecture, deployment and scalable systems.",
+    bio: "Cloud engineer specializing in cloud architecture, deployment and scalable systems."
   },
   {
     id: 6,
@@ -60,11 +60,14 @@ const expertsData = [
     domain: "Web Development",
     experience: "5+ Years Experience",
     initials: "RD",
-    bio: "Full stack developer experienced in building modern web applications and APIs.",
-  },
+    bio: "Full stack developer experienced in building modern web applications and APIs."
+  }
 ];
 
 function IndustryExperts() {
+  const user = JSON.parse(localStorage.getItem("user"));
+  const fullName = user ? `${user.first_name} ${user.last_name || ""}`.trim() : "Guest";
+  const initial = user?.first_name ? user.first_name.charAt(0).toUpperCase() : "?";
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDomain, setSelectedDomain] =
     useState("All Domains");
@@ -76,7 +79,7 @@ function IndustryExperts() {
     "Product Management",
     "Cybersecurity",
     "Cloud Computing",
-    "Web Development",
+    "Web Development"
   ];
 
   const filteredExperts = expertsData.filter((expert) => {
@@ -95,10 +98,17 @@ function IndustryExperts() {
     return matchesSearch && matchesDomain;
   });
 
+  const handleViewProfile = (expertId) => {
+    window.location.href = `/industry-experts/${expertId}`;
+  };
+
   return (
     <div className="experts-page">
 
-      {/* Header */}
+      {/* =================================================
+          HEADER
+      ================================================= */}
+
       <header className="experts-header">
 
         <div className="experts-brand">
@@ -107,16 +117,23 @@ function IndustryExperts() {
 
         <div className="experts-header-actions">
 
-          <button className="notification-button">
+          <button
+            className="notification-button"
+            type="button"
+          >
             🔔
           </button>
 
           <div className="profile-mini">
+
             <div className="profile-avatar">
-              A
+              {initial}
             </div>
 
-            <span>Student</span>
+            <span>
+              {fullName}
+            </span>
+
           </div>
 
         </div>
@@ -124,30 +141,44 @@ function IndustryExperts() {
       </header>
 
 
-      {/* Main Content */}
+      {/* =================================================
+          MAIN CONTENT
+      ================================================= */}
+
       <main className="experts-content">
 
-        {/* Hero */}
+
+        {/* =================================================
+            HERO
+        ================================================= */}
+
         <section className="experts-hero">
 
-          <p className="section-label">
-            INDUSTRY CONNECTIONS
-          </p>
+          <div>
 
-          <h2>
-            Learn From Industry Experts
-          </h2>
+            <p className="section-label">
+              INDUSTRY CONNECTIONS
+            </p>
 
-          <p className="hero-description">
-            Connect with verified professionals and learn from
-            their real-world career experiences, insights and
-            practical guidance.
-          </p>
+            <h2>
+              Learn From Industry Experts
+            </h2>
+
+            <p className="hero-description">
+              Connect with verified professionals and learn from
+              their real-world career experiences, insights and
+              practical guidance.
+            </p>
+
+          </div>
 
         </section>
 
 
-        {/* Search & Filter */}
+        {/* =================================================
+            SEARCH & FILTER
+        ================================================= */}
+
         <section className="experts-controls">
 
           <div className="search-box">
@@ -167,6 +198,7 @@ function IndustryExperts() {
 
           </div>
 
+
           <select
             value={selectedDomain}
             onChange={(e) =>
@@ -174,30 +206,40 @@ function IndustryExperts() {
             }
             className="domain-filter"
           >
+
             {domains.map((domain) => (
-              <option key={domain} value={domain}>
+              <option
+                key={domain}
+                value={domain}
+              >
                 {domain}
               </option>
             ))}
+
           </select>
 
         </section>
 
 
-        {/* Experts */}
+        {/* =================================================
+            EXPERTS SECTION
+        ================================================= */}
+
         <section className="experts-section">
 
           <div className="section-heading">
 
             <div>
+
               <h3>
                 Featured Industry Experts
               </h3>
 
               <p>
-                Explore professionals who can help you
-                understand real-world career paths.
+                Explore professionals who can help you understand
+                real-world career paths.
               </p>
+
             </div>
 
             <span className="expert-count">
@@ -206,6 +248,10 @@ function IndustryExperts() {
 
           </div>
 
+
+          {/* =================================================
+              EXPERT GRID
+          ================================================= */}
 
           <div className="experts-grid">
 
@@ -218,9 +264,14 @@ function IndustryExperts() {
                   key={expert.id}
                 >
 
+                  {/* Avatar */}
+
                   <div className="expert-avatar">
                     {expert.initials}
                   </div>
+
+
+                  {/* Information */}
 
                   <div className="expert-info">
 
@@ -239,13 +290,16 @@ function IndustryExperts() {
 
                     </div>
 
+
                     <p className="expert-role">
                       {expert.role}
                     </p>
 
+
                     <p className="expert-company">
                       {expert.company}
                     </p>
+
 
                     <div className="expert-meta">
 
@@ -259,21 +313,24 @@ function IndustryExperts() {
 
                     </div>
 
+
                     <p className="expert-bio">
                       {expert.bio}
                     </p>
 
+
+                    {/* View Profile */}
+
                     <button
-                      className="view-profile-button"
-                      onClick={() =>
-                        alert(
-                          `Profile page for ${expert.name} will be connected later.`
-                        )
-                      }
-                    >
-                      View Profile
-                      <span>→</span>
-                    </button>
+  className="view-profile-button"
+  type="button"
+  onClick={() => {
+    window.location.href = `/industry-experts/${expert.id}`;
+  }}
+>
+  View Profile
+  <span>→</span>
+</button>
 
                   </div>
 

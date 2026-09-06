@@ -4,7 +4,7 @@ from django.db import models
 class User(models.Model):
     ROLE_CHOICES = [
         ('STUDENT', 'Student'),
-        ('MENTOR', 'Mentor'),
+        ('ADMIN', 'Admin'),
         ('PROFESSIONAL', 'Professional'),
     ]
 

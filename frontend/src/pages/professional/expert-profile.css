@@ -1,0 +1,853 @@
+/* =====================================================
+   PAGE
+===================================================== */
+
+.expert-profile-page {
+  min-height: 100vh;
+  background: #f5f7fb;
+  color: #1f2937;
+}
+
+
+/* =====================================================
+   HEADER
+===================================================== */
+
+.expert-profile-page .experts-header {
+  height: 72px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 0 50px;
+}
+
+.expert-profile-page .experts-brand h1 {
+  margin: 0;
+
+  font-size: 24px;
+  font-weight: 700;
+
+  color: #2f5bea;
+}
+
+.expert-profile-page .experts-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.expert-profile-page .notification-button {
+  border: none;
+  background: transparent;
+
+  font-size: 20px;
+
+  cursor: pointer;
+}
+
+.expert-profile-page .profile-mini {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.expert-profile-page .profile-avatar {
+  width: 36px;
+  height: 36px;
+
+  border-radius: 50%;
+
+  background: #2f5bea;
+  color: white;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-weight: 600;
+}
+
+
+/* =====================================================
+   CONTENT
+===================================================== */
+
+.expert-profile-content {
+  max-width: 1200px;
+
+  margin: 0 auto;
+
+  padding: 35px 30px 70px;
+}
+
+
+/* =====================================================
+   BACK BUTTON
+===================================================== */
+
+.back-experts-button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+
+  margin-bottom: 20px;
+
+  padding: 0;
+
+  border: none;
+
+  background: transparent;
+
+  color: #6b7280;
+
+  font-family: inherit;
+
+  font-size: 12px;
+
+  cursor: pointer;
+}
+
+.back-experts-button:hover {
+  color: #2f5bea;
+}
+
+
+/* =====================================================
+   HERO
+===================================================== */
+
+.expert-profile-hero {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+
+  padding: 27px;
+
+  margin-bottom: 22px;
+
+  background: #ffffff;
+
+  border: 1px solid #e5e7eb;
+
+  border-radius: 16px;
+}
+
+.expert-profile-avatar {
+  width: 105px;
+  height: 105px;
+
+  min-width: 105px;
+
+  border-radius: 50%;
+
+  background: #e9efff;
+
+  color: #2f5bea;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.expert-profile-main {
+  flex: 1;
+}
+
+.expert-profile-name-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.expert-profile-name-row h1 {
+  margin: 0;
+
+  font-size: 27px;
+
+  color: #111827;
+}
+
+.expert-verified {
+  width: 20px;
+  height: 20px;
+
+  border-radius: 50%;
+
+  background: #2f5bea;
+  color: #ffffff;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.expert-profile-role {
+  margin: 7px 0 3px;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  color: #374151;
+}
+
+.expert-profile-company {
+  margin: 0;
+
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  font-size: 12px;
+
+  color: #6b7280;
+}
+
+.expert-profile-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  margin-top: 15px;
+}
+
+.expert-profile-meta span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+
+  padding: 6px 9px;
+
+  border-radius: 7px;
+
+  background: #f5f7fb;
+
+  color: #65708a;
+
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.expert-connect-area {
+  min-width: 175px;
+
+  padding-left: 20px;
+
+  border-left: 1px solid #e5e7eb;
+
+  text-align: center;
+}
+
+.expert-connect-area > span {
+  display: block;
+
+  margin-top: 7px;
+
+  font-size: 8px;
+
+  color: #9ca3af;
+}
+
+.expert-connect-button {
+  display: inline-flex;
+
+  align-items: center;
+  justify-content: center;
+
+  gap: 7px;
+
+  padding: 11px 15px;
+
+  border: none;
+
+  border-radius: 9px;
+
+  background: #2f5bea;
+
+  color: #ffffff;
+
+  font-family: inherit;
+
+  font-size: 10px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: background 0.2s ease;
+}
+
+.expert-connect-button:hover {
+  background: #2448c5;
+}
+
+
+/* =====================================================
+   GRID
+===================================================== */
+
+.expert-profile-grid {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1.65fr)
+    minmax(300px, 0.85fr);
+
+  gap: 20px;
+}
+
+.expert-profile-left,
+.expert-profile-right {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+
+/* =====================================================
+   CARD
+===================================================== */
+
+.expert-profile-card {
+  padding: 22px;
+
+  background: #ffffff;
+
+  border: 1px solid #e5e7eb;
+
+  border-radius: 14px;
+}
+
+.expert-card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  margin-bottom: 17px;
+}
+
+.expert-card-heading > i {
+  color: #2f5bea;
+
+  font-size: 17px;
+}
+
+.expert-card-heading h2 {
+  margin: 5px 0 0;
+
+  font-size: 17px;
+
+  color: #111827;
+}
+
+.expert-section-label {
+  display: block;
+
+  font-size: 8px;
+  font-weight: 700;
+
+  letter-spacing: 1.2px;
+
+  color: #2f5bea;
+}
+
+
+/* =====================================================
+   ABOUT
+===================================================== */
+
+.expert-about {
+  margin: 0;
+
+  font-size: 11px;
+
+  line-height: 1.8;
+
+  color: #6b7280;
+}
+
+
+/* =====================================================
+   SKILLS
+===================================================== */
+
+.expert-skills {
+  display: flex;
+  flex-wrap: wrap;
+
+  gap: 8px;
+}
+
+.expert-skills span {
+  padding: 7px 10px;
+
+  border-radius: 7px;
+
+  background: #eef2ff;
+
+  color: #3747a8;
+
+  font-size: 9px;
+  font-weight: 600;
+}
+
+
+/* =====================================================
+   TIMELINE
+===================================================== */
+
+.expert-timeline {
+  position: relative;
+}
+
+.expert-timeline-item {
+  position: relative;
+
+  display: flex;
+
+  gap: 15px;
+
+  padding-bottom: 21px;
+}
+
+.expert-timeline-item:last-child {
+  padding-bottom: 0;
+}
+
+.timeline-dot {
+  width: 27px;
+  height: 27px;
+
+  min-width: 27px;
+
+  border-radius: 50%;
+
+  background: #e9efff;
+
+  color: #2f5bea;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 8px;
+  font-weight: 700;
+
+  position: relative;
+
+  z-index: 2;
+}
+
+.timeline-line {
+  position: absolute;
+
+  left: 13px;
+  top: 27px;
+
+  width: 1px;
+  height: calc(100% - 12px);
+
+  background: #dce2ef;
+}
+
+.expert-timeline-item:last-child .timeline-line {
+  display: none;
+}
+
+.timeline-content {
+  padding-top: 1px;
+}
+
+.timeline-content > span {
+  font-size: 8px;
+
+  font-weight: 700;
+
+  color: #2f5bea;
+}
+
+.timeline-content h3 {
+  margin: 4px 0 4px;
+
+  font-size: 12px;
+
+  color: #111827;
+}
+
+.timeline-content p {
+  margin: 0;
+
+  font-size: 9px;
+
+  line-height: 1.6;
+
+  color: #6b7280;
+}
+
+
+/* =====================================================
+   GUIDANCE
+===================================================== */
+
+.expert-guidance-list {
+  display: flex;
+  flex-direction: column;
+
+  gap: 8px;
+}
+
+.expert-guidance-item {
+  display: flex;
+  align-items: center;
+
+  gap: 9px;
+
+  padding: 10px;
+
+  border-radius: 8px;
+
+  background: #f8f9fb;
+}
+
+.expert-guidance-item > span {
+  font-size: 8px;
+
+  font-weight: 700;
+
+  color: #c6ccda;
+}
+
+.expert-guidance-item p {
+  flex: 1;
+
+  margin: 0;
+
+  font-size: 9px;
+
+  color: #4b5563;
+}
+
+.expert-guidance-item > i {
+  font-size: 10px;
+
+  color: #2f5bea;
+}
+
+
+/* =====================================================
+   SNAPSHOT
+===================================================== */
+
+.expert-snapshot {
+  display: flex;
+  flex-direction: column;
+
+  gap: 12px;
+}
+
+.expert-snapshot > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 10px;
+
+  padding-bottom: 10px;
+
+  border-bottom: 1px solid #f0f1f4;
+}
+
+.expert-snapshot > div:last-child {
+  padding-bottom: 0;
+
+  border-bottom: none;
+}
+
+.expert-snapshot span {
+  font-size: 9px;
+
+  color: #9ca3af;
+}
+
+.expert-snapshot strong {
+  max-width: 180px;
+
+  text-align: right;
+
+  font-size: 9px;
+
+  color: #374151;
+}
+
+
+/* =====================================================
+   AI CARD
+===================================================== */
+
+.expert-ai-card {
+  padding: 20px;
+
+  background: #f8faff;
+
+  border: 1px solid #dce4ff;
+
+  border-radius: 14px;
+}
+
+.expert-ai-icon {
+  width: 38px;
+  height: 38px;
+
+  margin-bottom: 13px;
+
+  border-radius: 9px;
+
+  background: #e9efff;
+
+  color: #2f5bea;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 16px;
+}
+
+.expert-ai-card h2 {
+  margin: 5px 0 7px;
+
+  font-size: 15px;
+
+  color: #111827;
+}
+
+.expert-ai-card > p {
+  margin: 0;
+
+  font-size: 9px;
+
+  line-height: 1.7;
+
+  color: #6b7280;
+}
+
+.expert-ai-placeholder {
+  display: flex;
+
+  align-items: flex-start;
+
+  gap: 7px;
+
+  margin-top: 13px;
+
+  padding: 10px;
+
+  background: #ffffff;
+
+  border: 1px dashed #cfd7ed;
+
+  border-radius: 8px;
+
+  font-size: 8px;
+
+  line-height: 1.5;
+
+  color: #7b8497;
+}
+
+.expert-ai-placeholder i {
+  color: #2f5bea;
+}
+
+.ai-ready-badge {
+  display: inline-block;
+
+  margin-top: 10px;
+
+  padding: 5px 8px;
+
+  border-radius: 20px;
+
+  background: #e9efff;
+
+  color: #2f5bea;
+
+  font-size: 8px;
+
+  font-weight: 600;
+}
+
+
+/* =====================================================
+   BOTTOM CTA
+===================================================== */
+
+.expert-bottom-cta {
+  display: flex;
+
+  align-items: center;
+
+  gap: 15px;
+
+  margin-top: 20px;
+
+  padding: 21px;
+
+  background: #ffffff;
+
+  border: 1px solid #e5e7eb;
+
+  border-radius: 14px;
+}
+
+.expert-bottom-icon {
+  width: 44px;
+  height: 44px;
+
+  min-width: 44px;
+
+  border-radius: 10px;
+
+  background: #e9efff;
+
+  color: #2f5bea;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 17px;
+}
+
+.expert-bottom-cta > div:nth-child(2) {
+  flex: 1;
+}
+
+.expert-bottom-cta h2 {
+  margin: 5px 0 6px;
+
+  font-size: 16px;
+
+  color: #111827;
+}
+
+.expert-bottom-cta p {
+  max-width: 650px;
+
+  margin: 0;
+
+  font-size: 9px;
+
+  line-height: 1.6;
+
+  color: #6b7280;
+}
+
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+
+@media (max-width: 900px) {
+
+  .expert-profile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .expert-profile-right {
+    display: grid;
+
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+
+    align-items: start;
+  }
+
+  .expert-ai-card {
+    grid-column: 1 / -1;
+  }
+
+}
+
+
+@media (max-width: 700px) {
+
+  .expert-profile-page .experts-header {
+    padding: 0 20px;
+  }
+
+  .expert-profile-content {
+    padding: 28px 20px 50px;
+  }
+
+  .expert-profile-hero {
+    align-items: flex-start;
+
+    flex-direction: column;
+  }
+
+  .expert-profile-name-row h1 {
+    font-size: 23px;
+  }
+
+  .expert-connect-area {
+    width: 100%;
+
+    padding: 18px 0 0;
+
+    border-left: none;
+
+    border-top: 1px solid #e5e7eb;
+  }
+
+  .expert-connect-button {
+    width: 100%;
+  }
+
+  .expert-profile-right {
+    display: flex;
+  }
+
+  .expert-bottom-cta {
+    align-items: flex-start;
+
+    flex-direction: column;
+  }
+
+  .expert-bottom-cta .expert-connect-button {
+    width: 100%;
+  }
+
+}
+
+
+@media (max-width: 450px) {
+
+  .expert-profile-page .experts-brand h1 {
+    font-size: 20px;
+  }
+
+  .expert-profile-page .profile-mini span {
+    display: none;
+  }
+
+  .expert-profile-meta {
+    flex-direction: column;
+  }
+
+  .expert-profile-meta span {
+    width: fit-content;
+  }
+
+}

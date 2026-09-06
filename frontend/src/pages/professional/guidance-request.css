@@ -1,0 +1,791 @@
+/* =====================================================
+   PAGE
+===================================================== */
+
+.guidance-page {
+  min-height: 100vh;
+  background: #f5f7fb;
+  color: #1f2937;
+}
+
+
+/* =====================================================
+   HEADER
+===================================================== */
+
+.guidance-header {
+  height: 72px;
+
+  background: #ffffff;
+
+  border-bottom: 1px solid #e5e7eb;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 0 50px;
+}
+
+.guidance-brand {
+  font-size: 24px;
+  font-weight: 700;
+
+  color: #2f5bea;
+}
+
+.guidance-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.guidance-avatar {
+  width: 36px;
+  height: 36px;
+
+  border-radius: 50%;
+
+  background: #2f5bea;
+  color: #ffffff;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-weight: 600;
+}
+
+
+/* =====================================================
+   CONTENT
+===================================================== */
+
+.guidance-content {
+  max-width: 1100px;
+
+  margin: 0 auto;
+
+  padding: 35px 30px 70px;
+}
+
+
+/* =====================================================
+   BACK
+===================================================== */
+
+.guidance-back-button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+
+  padding: 0;
+  margin-bottom: 22px;
+
+  border: none;
+  background: transparent;
+
+  color: #6b7280;
+
+  font-family: inherit;
+
+  font-size: 12px;
+
+  cursor: pointer;
+}
+
+.guidance-back-button:hover {
+  color: #2f5bea;
+}
+
+
+/* =====================================================
+   LAYOUT
+===================================================== */
+
+.guidance-layout {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1.5fr)
+    minmax(280px, 0.8fr);
+
+  gap: 22px;
+}
+
+.guidance-main {
+  min-width: 0;
+}
+
+
+/* =====================================================
+   INTRO
+===================================================== */
+
+.guidance-intro {
+  margin-bottom: 20px;
+}
+
+.guidance-label {
+  display: block;
+
+  font-size: 8px;
+  font-weight: 700;
+
+  letter-spacing: 1.3px;
+
+  color: #2f5bea;
+}
+
+.guidance-intro h1 {
+  margin: 6px 0 8px;
+
+  font-size: 30px;
+
+  color: #111827;
+}
+
+.guidance-intro p {
+  max-width: 650px;
+
+  margin: 0;
+
+  font-size: 11px;
+
+  line-height: 1.7;
+
+  color: #6b7280;
+}
+
+
+/* =====================================================
+   SELECTED EXPERT
+===================================================== */
+
+.selected-expert-card {
+  display: flex;
+  align-items: center;
+
+  gap: 13px;
+
+  padding: 15px 17px;
+
+  margin-bottom: 18px;
+
+  background: #ffffff;
+
+  border: 1px solid #e5e7eb;
+
+  border-radius: 12px;
+}
+
+.selected-expert-avatar {
+  width: 52px;
+  height: 52px;
+
+  min-width: 52px;
+
+  border-radius: 50%;
+
+  background: #e9efff;
+
+  color: #2f5bea;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.selected-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  font-size: 14px;
+  font-weight: 700;
+
+  color: #111827;
+}
+
+.selected-name span {
+  width: 16px;
+  height: 16px;
+
+  border-radius: 50%;
+
+  background: #2f5bea;
+  color: #ffffff;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 8px;
+}
+
+.selected-expert-card p {
+  margin: 4px 0;
+
+  font-size: 10px;
+
+  color: #6b7280;
+}
+
+.selected-expert-card small {
+  font-size: 8px;
+
+  color: #2f5bea;
+
+  font-weight: 600;
+}
+
+
+/* =====================================================
+   FORM
+===================================================== */
+
+.guidance-form {
+  padding: 22px;
+
+  background: #ffffff;
+
+  border: 1px solid #e5e7eb;
+
+  border-radius: 14px;
+}
+
+.form-group {
+  margin-bottom: 19px;
+}
+
+.form-group label {
+  display: block;
+
+  margin-bottom: 7px;
+
+  font-size: 10px;
+
+  font-weight: 600;
+
+  color: #374151;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+
+  box-sizing: border-box;
+
+  border: 1px solid #d9dee8;
+
+  border-radius: 8px;
+
+  background: #ffffff;
+
+  color: #374151;
+
+  font-family: inherit;
+
+  font-size: 10px;
+
+  outline: none;
+
+  transition: border 0.2s ease;
+}
+
+.form-group select {
+  height: 42px;
+
+  padding: 0 11px;
+
+  cursor: pointer;
+}
+
+.form-group textarea {
+  padding: 11px;
+
+  resize: vertical;
+
+  line-height: 1.6;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: #2f5bea;
+}
+
+
+/* =====================================================
+   FORM ACTIONS
+===================================================== */
+
+.form-actions {
+  display: flex;
+
+  justify-content: flex-end;
+
+  gap: 10px;
+
+  padding-top: 5px;
+}
+
+.guidance-primary-button,
+.guidance-secondary-button {
+  display: inline-flex;
+
+  align-items: center;
+  justify-content: center;
+
+  gap: 7px;
+
+  padding: 11px 16px;
+
+  border-radius: 8px;
+
+  font-family: inherit;
+
+  font-size: 10px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.guidance-primary-button {
+  border: none;
+
+  background: #2f5bea;
+
+  color: #ffffff;
+}
+
+.guidance-primary-button:hover {
+  background: #2448c5;
+}
+
+.guidance-secondary-button {
+  border: 1px solid #d9dee8;
+
+  background: #ffffff;
+
+  color: #6b7280;
+}
+
+.guidance-secondary-button:hover {
+  border-color: #2f5bea;
+
+  color: #2f5bea;
+}
+
+
+/* =====================================================
+   SIDEBAR
+===================================================== */
+
+.guidance-sidebar {
+  display: flex;
+  flex-direction: column;
+
+  gap: 18px;
+}
+
+
+/* =====================================================
+   AI CARD
+===================================================== */
+
+.guidance-ai-card {
+  padding: 20px;
+
+  background: #f8faff;
+
+  border: 1px solid #dce4ff;
+
+  border-radius: 14px;
+}
+
+.guidance-ai-icon {
+  width: 38px;
+  height: 38px;
+
+  margin-bottom: 13px;
+
+  border-radius: 9px;
+
+  background: #e9efff;
+
+  color: #2f5bea;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 16px;
+}
+
+.guidance-ai-card h2 {
+  margin: 5px 0 7px;
+
+  font-size: 15px;
+
+  color: #111827;
+}
+
+.guidance-ai-card > p {
+  margin: 0;
+
+  font-size: 9px;
+
+  line-height: 1.7;
+
+  color: #6b7280;
+}
+
+.ai-suggestion-placeholder {
+  display: flex;
+
+  gap: 8px;
+
+  margin-top: 14px;
+
+  padding: 11px;
+
+  background: #ffffff;
+
+  border: 1px dashed #cfd7ed;
+
+  border-radius: 8px;
+
+  color: #7b8497;
+}
+
+.ai-suggestion-placeholder > i {
+  color: #2f5bea;
+
+  font-size: 11px;
+}
+
+.ai-suggestion-placeholder div {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 3px;
+}
+
+.ai-suggestion-placeholder strong {
+  font-size: 9px;
+
+  color: #4b5563;
+}
+
+.ai-suggestion-placeholder span {
+  font-size: 8px;
+
+  line-height: 1.5;
+}
+
+.ai-ready-badge {
+  display: inline-block;
+
+  margin-top: 10px;
+
+  padding: 5px 8px;
+
+  border-radius: 20px;
+
+  background: #e9efff;
+
+  color: #2f5bea;
+
+  font-size: 8px;
+
+  font-weight: 600;
+}
+
+
+/* =====================================================
+   TIPS
+===================================================== */
+
+.guidance-tips-card {
+  padding: 20px;
+
+  background: #ffffff;
+
+  border: 1px solid #e5e7eb;
+
+  border-radius: 14px;
+}
+
+.guidance-tips-card h2 {
+  margin: 5px 0 16px;
+
+  font-size: 15px;
+
+  color: #111827;
+}
+
+.guidance-tip {
+  display: flex;
+
+  align-items: flex-start;
+
+  gap: 8px;
+
+  margin-bottom: 12px;
+}
+
+.guidance-tip:last-child {
+  margin-bottom: 0;
+}
+
+.guidance-tip i {
+  color: #2f5bea;
+
+  font-size: 11px;
+}
+
+.guidance-tip span {
+  font-size: 9px;
+
+  line-height: 1.5;
+
+  color: #6b7280;
+}
+
+
+/* =====================================================
+   SUCCESS
+===================================================== */
+
+.guidance-success-card {
+  max-width: 700px;
+
+  margin: 35px auto 0;
+
+  padding: 45px 40px;
+
+  text-align: center;
+
+  background: #ffffff;
+
+  border: 1px solid #e5e7eb;
+
+  border-radius: 16px;
+}
+
+.success-icon {
+  width: 65px;
+  height: 65px;
+
+  margin: 0 auto 18px;
+
+  border-radius: 50%;
+
+  background: #e9efff;
+
+  color: #2f5bea;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 25px;
+}
+
+.guidance-success-card h1 {
+  margin: 8px 0 10px;
+
+  font-size: 24px;
+
+  color: #111827;
+}
+
+.guidance-success-card > p {
+  max-width: 500px;
+
+  margin: 0 auto 8px;
+
+  font-size: 11px;
+
+  line-height: 1.7;
+
+  color: #6b7280;
+}
+
+.guidance-success-card .success-note {
+  font-size: 9px;
+
+  color: #9ca3af;
+}
+
+
+/* =====================================================
+   REQUEST STATUS
+===================================================== */
+
+.request-status {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  margin: 30px 0;
+
+}
+
+.status-item {
+  display: flex;
+
+  align-items: center;
+
+  gap: 7px;
+
+  text-align: left;
+}
+
+.status-item > span {
+  width: 27px;
+  height: 27px;
+
+  border-radius: 50%;
+
+  background: #f0f1f4;
+
+  color: #9ca3af;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.status-item.active > span {
+  background: #2f5bea;
+
+  color: #ffffff;
+}
+
+.status-item div {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 2px;
+}
+
+.status-item strong {
+  font-size: 8px;
+
+  color: #374151;
+}
+
+.status-item small {
+  font-size: 7px;
+
+  color: #9ca3af;
+}
+
+.status-line {
+  width: 40px;
+  height: 1px;
+
+  margin: 0 8px;
+
+  background: #e5e7eb;
+}
+
+.guidance-success-card .guidance-primary-button {
+  margin-top: 5px;
+}
+
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+
+@media (max-width: 850px) {
+
+  .guidance-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .guidance-sidebar {
+    display: grid;
+
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+}
+
+
+@media (max-width: 650px) {
+
+  .guidance-header {
+    padding: 0 20px;
+  }
+
+  .guidance-content {
+    padding: 28px 20px 50px;
+  }
+
+  .guidance-sidebar {
+    display: flex;
+  }
+
+  .guidance-intro h1 {
+    font-size: 26px;
+  }
+
+  .form-actions {
+    flex-direction: column-reverse;
+  }
+
+  .form-actions button {
+    width: 100%;
+  }
+
+  .request-status {
+    align-items: flex-start;
+
+    flex-direction: column;
+
+    gap: 10px;
+  }
+
+  .status-line {
+    width: 1px;
+    height: 18px;
+
+    margin: 0 0 0 13px;
+  }
+
+}
+
+
+@media (max-width: 450px) {
+
+  .guidance-brand {
+    font-size: 20px;
+  }
+
+  .guidance-profile span {
+    display: none;
+  }
+
+  .guidance-success-card {
+    padding: 35px 20px;
+  }
+
+}

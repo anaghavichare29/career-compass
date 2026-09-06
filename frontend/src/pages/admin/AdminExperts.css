@@ -1,0 +1,1231 @@
+/* =====================================================
+   PAGE
+===================================================== */
+
+.admin-experts-page {
+  min-height: 100vh;
+  background: #f5f7fb;
+  color: #1f2937;
+}
+
+.admin-experts-content {
+  max-width: 1250px;
+  margin: 0 auto;
+  padding: 32px 30px 70px;
+}
+
+
+/* =====================================================
+   HEADER
+===================================================== */
+
+.admin-header {
+  height: 72px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 0 50px;
+}
+
+.admin-brand h1 {
+  margin: 0;
+
+  font-size: 24px;
+  font-weight: 700;
+
+  color: #2f5bea;
+}
+
+.admin-header-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.admin-notification {
+  position: relative;
+
+  border: none;
+  background: transparent;
+
+  color: #4b5563;
+
+  font-size: 18px;
+
+  cursor: pointer;
+}
+
+.admin-notification span {
+  position: absolute;
+
+  top: 0;
+  right: 0;
+
+  width: 7px;
+  height: 7px;
+
+  border-radius: 50%;
+
+  background: #ef4444;
+
+  border: 2px solid white;
+}
+
+.admin-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-avatar {
+  width: 36px;
+  height: 36px;
+
+  border-radius: 50%;
+
+  background: #2f5bea;
+  color: white;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.admin-profile-info strong {
+  font-size: 12px;
+  color: #111827;
+}
+
+.admin-profile-info small {
+  font-size: 9px;
+  color: #9ca3af;
+}
+
+.admin-profile > i {
+  color: #9ca3af;
+  font-size: 10px;
+}
+
+
+/* =====================================================
+   BACK BUTTON
+===================================================== */
+
+.admin-back-button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+
+  margin-bottom: 22px;
+  padding: 0;
+
+  border: none;
+  background: transparent;
+
+  color: #6b7280;
+
+  font-size: 10px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.admin-back-button:hover {
+  color: #2f5bea;
+}
+
+
+/* =====================================================
+   PAGE HEADING
+===================================================== */
+
+.admin-page-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+
+  margin-bottom: 25px;
+}
+
+.admin-section-label {
+  display: block;
+
+  font-size: 9px;
+  font-weight: 700;
+
+  letter-spacing: 1.4px;
+
+  color: #2f5bea;
+}
+
+.admin-page-heading h2 {
+  margin: 6px 0 7px;
+
+  font-size: 30px;
+  line-height: 1.2;
+
+  color: #111827;
+}
+
+.admin-page-heading p {
+  margin: 0;
+
+  font-size: 11px;
+
+  color: #6b7280;
+}
+
+.admin-primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 7px;
+
+  padding: 10px 15px;
+
+  border: none;
+  border-radius: 8px;
+
+  background: #2f5bea;
+  color: white;
+
+  font-family: inherit;
+
+  font-size: 10px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.admin-primary-button:hover {
+  background: #2448c5;
+}
+
+
+/* =====================================================
+   STATISTICS
+===================================================== */
+
+.expert-admin-stats {
+  display: grid;
+
+  grid-template-columns: repeat(4, 1fr);
+
+  gap: 15px;
+
+  margin-bottom: 18px;
+}
+
+.expert-admin-stat {
+  display: flex;
+  align-items: center;
+
+  gap: 12px;
+
+  padding: 17px;
+
+  background: white;
+
+  border: 1px solid #e5e7eb;
+
+  border-radius: 13px;
+}
+
+.expert-admin-stat-icon {
+  width: 42px;
+  height: 42px;
+
+  min-width: 42px;
+
+  border-radius: 10px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 16px;
+}
+
+.expert-admin-stat-icon.blue {
+  background: #e9efff;
+  color: #2f5bea;
+}
+
+.expert-admin-stat-icon.green {
+  background: #e7f8ef;
+  color: #16a34a;
+}
+
+.expert-admin-stat-icon.orange {
+  background: #fff3df;
+  color: #ea8a00;
+}
+
+.expert-admin-stat-icon.purple {
+  background: #f0eaff;
+  color: #7c3aed;
+}
+
+.expert-admin-stat div:last-child {
+  display: flex;
+  flex-direction: column;
+
+  gap: 2px;
+}
+
+.expert-admin-stat span {
+  font-size: 8px;
+  color: #6b7280;
+}
+
+.expert-admin-stat strong {
+  font-size: 20px;
+  color: #111827;
+}
+
+.expert-admin-stat small {
+  font-size: 7px;
+  color: #9ca3af;
+}
+
+
+/* =====================================================
+   AI CARD
+===================================================== */
+
+.admin-expert-ai {
+  display: flex;
+  align-items: center;
+
+  gap: 13px;
+
+  margin-bottom: 20px;
+  padding: 16px 18px;
+
+  background: #f8faff;
+
+  border: 1px solid #dce4ff;
+
+  border-radius: 13px;
+}
+
+.admin-expert-ai-icon {
+  width: 40px;
+  height: 40px;
+
+  min-width: 40px;
+
+  border-radius: 9px;
+
+  background: #e9efff;
+  color: #2f5bea;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 16px;
+}
+
+.admin-expert-ai-content {
+  flex: 1;
+}
+
+.admin-expert-ai-content h3 {
+  margin: 4px 0;
+
+  font-size: 13px;
+
+  color: #111827;
+}
+
+.admin-expert-ai-content p {
+  max-width: 760px;
+
+  margin: 0;
+
+  font-size: 8px;
+
+  line-height: 1.6;
+
+  color: #6b7280;
+}
+
+.ai-ready-badge {
+  padding: 5px 9px;
+
+  border-radius: 20px;
+
+  background: #e9efff;
+
+  color: #2f5bea;
+
+  font-size: 8px;
+
+  font-weight: 600;
+}
+
+
+/* =====================================================
+   CONTROLS
+===================================================== */
+
+.admin-expert-controls {
+  display: flex;
+
+  gap: 10px;
+
+  margin-bottom: 15px;
+}
+
+.admin-expert-search {
+  flex: 1;
+
+  height: 42px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 8px;
+
+  padding: 0 12px;
+
+  background: white;
+
+  border: 1px solid #dfe3ea;
+
+  border-radius: 8px;
+}
+
+.admin-expert-search i {
+  color: #9ca3af;
+
+  font-size: 12px;
+}
+
+.admin-expert-search input {
+  width: 100%;
+
+  border: none;
+  outline: none;
+
+  font-family: inherit;
+
+  font-size: 9px;
+
+  color: #374151;
+}
+
+.admin-expert-controls select {
+  width: 180px;
+
+  height: 42px;
+
+  padding: 0 10px;
+
+  border: 1px solid #dfe3ea;
+
+  border-radius: 8px;
+
+  background: white;
+
+  color: #374151;
+
+  font-family: inherit;
+
+  font-size: 9px;
+
+  cursor: pointer;
+
+  outline: none;
+}
+
+
+/* =====================================================
+   TABLE
+===================================================== */
+
+.admin-expert-table-card {
+  background: white;
+
+  border: 1px solid #e5e7eb;
+
+  border-radius: 14px;
+
+  overflow: hidden;
+}
+
+.admin-table-header {
+  display: flex;
+
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 19px 20px;
+
+  border-bottom: 1px solid #eef0f4;
+}
+
+.admin-table-header h3 {
+  margin: 5px 0 0;
+
+  font-size: 16px;
+
+  color: #111827;
+}
+
+.expert-result-count {
+  padding: 6px 10px;
+
+  border-radius: 20px;
+
+  background: #eef2ff;
+
+  color: #2f5bea;
+
+  font-size: 8px;
+
+  font-weight: 600;
+}
+
+.expert-table-wrapper {
+  width: 100%;
+
+  overflow-x: auto;
+}
+
+.expert-table {
+  width: 100%;
+
+  min-width: 1000px;
+
+  border-collapse: collapse;
+}
+
+.expert-table th {
+  padding: 11px 15px;
+
+  background: #fafbfc;
+
+  border-bottom: 1px solid #eef0f4;
+
+  color: #9ca3af;
+
+  font-size: 7px;
+
+  font-weight: 700;
+
+  letter-spacing: 0.6px;
+
+  text-align: left;
+}
+
+.expert-table td {
+  padding: 13px 15px;
+
+  border-bottom: 1px solid #f0f1f4;
+
+  vertical-align: middle;
+}
+
+.expert-table tbody tr:hover {
+  background: #fafbff;
+}
+
+.expert-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+
+/* =====================================================
+   EXPERT USER
+===================================================== */
+
+.expert-table-user {
+  display: flex;
+  align-items: center;
+
+  gap: 9px;
+}
+
+.expert-table-avatar {
+  width: 32px;
+  height: 32px;
+
+  min-width: 32px;
+
+  border-radius: 50%;
+
+  background: #e9efff;
+
+  color: #2f5bea;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 9px;
+
+  font-weight: 700;
+}
+
+.expert-table-user div:last-child {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 3px;
+}
+
+.expert-table-user strong {
+  font-size: 9px;
+
+  color: #374151;
+}
+
+.expert-table-user span {
+  font-size: 7px;
+
+  color: #9ca3af;
+}
+
+
+/* =====================================================
+   ROLE
+===================================================== */
+
+.expert-role-cell {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 3px;
+}
+
+.expert-role-cell strong {
+  font-size: 8px;
+
+  color: #374151;
+}
+
+.expert-role-cell span {
+  font-size: 7px;
+
+  color: #9ca3af;
+}
+
+
+/* =====================================================
+   DOMAIN
+===================================================== */
+
+.expert-domain-badge {
+  display: inline-block;
+
+  max-width: 145px;
+
+  padding: 5px 8px;
+
+  border-radius: 6px;
+
+  background: #eef2ff;
+
+  color: #3747a8;
+
+  font-size: 7px;
+
+  font-weight: 600;
+}
+
+.expert-experience {
+  font-size: 8px;
+
+  color: #6b7280;
+}
+
+
+/* =====================================================
+   VERIFICATION
+===================================================== */
+
+.expert-verified-status,
+.expert-unverified-status {
+  display: inline-flex;
+
+  align-items: center;
+
+  gap: 5px;
+
+  font-size: 7px;
+
+  font-weight: 600;
+}
+
+.expert-verified-status {
+  color: #16a34a;
+}
+
+.expert-unverified-status {
+  color: #ea8a00;
+}
+
+
+/* =====================================================
+   STATUS
+===================================================== */
+
+.expert-status {
+  display: inline-flex;
+
+  align-items: center;
+
+  gap: 5px;
+
+  font-size: 7px;
+
+  font-weight: 600;
+}
+
+.expert-status > span {
+  width: 6px;
+  height: 6px;
+
+  border-radius: 50%;
+}
+
+.expert-status.approved {
+  color: #16a34a;
+}
+
+.expert-status.approved > span {
+  background: #16a34a;
+}
+
+.expert-status.pending {
+  color: #ea8a00;
+}
+
+.expert-status.pending > span {
+  background: #ea8a00;
+}
+
+.expert-status.rejected {
+  color: #dc2626;
+}
+
+.expert-status.rejected > span {
+  background: #dc2626;
+}
+
+
+/* =====================================================
+   REVIEW BUTTON
+===================================================== */
+
+.expert-view-button {
+  display: inline-flex;
+
+  align-items: center;
+
+  gap: 5px;
+
+  border: none;
+
+  background: transparent;
+
+  color: #2f5bea;
+
+  font-family: inherit;
+
+  font-size: 8px;
+
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.expert-view-button:hover {
+  color: #2448c5;
+}
+
+
+/* =====================================================
+   EMPTY
+===================================================== */
+
+.expert-empty-state {
+  height: 180px;
+
+  text-align: center;
+}
+
+.expert-empty-state i {
+  display: block;
+
+  margin-bottom: 8px;
+
+  color: #9ca3af;
+
+  font-size: 22px;
+}
+
+.expert-empty-state strong {
+  display: block;
+
+  margin-bottom: 4px;
+
+  font-size: 11px;
+
+  color: #374151;
+}
+
+.expert-empty-state span {
+  font-size: 8px;
+
+  color: #9ca3af;
+}
+
+
+/* =====================================================
+   REJECTED INFO
+===================================================== */
+
+.rejected-info {
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  margin-top: 12px;
+
+  padding: 10px 13px;
+
+  border-radius: 8px;
+
+  background: #fff8f8;
+
+  border: 1px solid #fee2e2;
+
+  color: #dc2626;
+
+  font-size: 8px;
+}
+
+.rejected-info i {
+  font-size: 11px;
+}
+
+
+/* =====================================================
+   MODAL
+===================================================== */
+
+.expert-modal-overlay {
+  position: fixed;
+
+  inset: 0;
+
+  z-index: 1000;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  background: rgba(17, 24, 39, 0.45);
+}
+
+.expert-modal {
+  position: relative;
+
+  width: 100%;
+
+  max-width: 520px;
+
+  padding: 25px;
+
+  background: white;
+
+  border-radius: 15px;
+
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.15);
+}
+
+.expert-modal-close {
+  position: absolute;
+
+  top: 15px;
+  right: 15px;
+
+  width: 28px;
+  height: 28px;
+
+  border: none;
+
+  border-radius: 7px;
+
+  background: #f5f7fb;
+
+  color: #6b7280;
+
+  cursor: pointer;
+}
+
+
+/* =====================================================
+   MODAL HEADER
+===================================================== */
+
+.expert-modal-header {
+  display: flex;
+
+  align-items: center;
+
+  gap: 12px;
+
+  margin-bottom: 20px;
+}
+
+.expert-modal-avatar {
+  width: 50px;
+  height: 50px;
+
+  border-radius: 50%;
+
+  background: #e9efff;
+
+  color: #2f5bea;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  font-size: 16px;
+
+  font-weight: 700;
+}
+
+.expert-modal-name {
+  display: flex;
+
+  align-items: center;
+
+  gap: 7px;
+}
+
+.expert-modal-name h2 {
+  margin: 0;
+
+  font-size: 17px;
+
+  color: #111827;
+}
+
+.expert-modal-name i {
+  color: #2f5bea;
+
+  font-size: 14px;
+}
+
+.expert-modal-header p {
+  margin: 4px 0 0;
+
+  font-size: 9px;
+
+  color: #6b7280;
+}
+
+
+/* =====================================================
+   COMPANY
+===================================================== */
+
+.expert-modal-company {
+  display: flex;
+
+  align-items: center;
+
+  gap: 10px;
+
+  padding: 12px;
+
+  margin-bottom: 12px;
+
+  border: 1px solid #eef0f4;
+
+  border-radius: 9px;
+
+  background: #fafbfc;
+}
+
+.expert-modal-company > i {
+  color: #2f5bea;
+
+  font-size: 14px;
+}
+
+.expert-modal-company div {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 3px;
+}
+
+.expert-modal-company span {
+  font-size: 7px;
+
+  color: #9ca3af;
+}
+
+.expert-modal-company strong {
+  font-size: 9px;
+
+  color: #374151;
+}
+
+
+/* =====================================================
+   DETAILS
+===================================================== */
+
+.expert-modal-details {
+  display: grid;
+
+  grid-template-columns: repeat(2, 1fr);
+
+  gap: 10px;
+
+  margin-bottom: 15px;
+}
+
+.expert-modal-details > div {
+  padding: 11px;
+
+  background: #fafbfc;
+
+  border: 1px solid #eef0f4;
+
+  border-radius: 8px;
+}
+
+.expert-modal-details span {
+  display: block;
+
+  margin-bottom: 4px;
+
+  font-size: 7px;
+
+  color: #9ca3af;
+}
+
+.expert-modal-details strong {
+  font-size: 9px;
+
+  color: #374151;
+}
+
+
+/* =====================================================
+   AI
+===================================================== */
+
+.expert-modal-ai {
+  display: flex;
+
+  gap: 9px;
+
+  padding: 12px;
+
+  margin-bottom: 18px;
+
+  background: #f8faff;
+
+  border: 1px dashed #cfd8f7;
+
+  border-radius: 9px;
+}
+
+.expert-modal-ai > i {
+  color: #2f5bea;
+
+  font-size: 13px;
+}
+
+.expert-modal-ai div {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 4px;
+}
+
+.expert-modal-ai strong {
+  font-size: 8px;
+
+  color: #374151;
+}
+
+.expert-modal-ai span {
+  font-size: 7px;
+
+  line-height: 1.5;
+
+  color: #9ca3af;
+}
+
+
+/* =====================================================
+   MODAL ACTIONS
+===================================================== */
+
+.expert-modal-actions {
+  display: flex;
+
+  justify-content: flex-end;
+
+  gap: 7px;
+
+  flex-wrap: wrap;
+}
+
+.expert-approve-button,
+.expert-reject-button,
+.expert-modal-secondary {
+  display: inline-flex;
+
+  align-items: center;
+
+  gap: 5px;
+
+  padding: 9px 12px;
+
+  border-radius: 7px;
+
+  font-family: inherit;
+
+  font-size: 8px;
+
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.expert-approve-button {
+  border: none;
+
+  background: #16a34a;
+
+  color: white;
+}
+
+.expert-approve-button:hover {
+  background: #15803d;
+}
+
+.expert-reject-button {
+  border: none;
+
+  background: #feecec;
+
+  color: #dc2626;
+}
+
+.expert-modal-secondary {
+  border: 1px solid #e5e7eb;
+
+  background: white;
+
+  color: #6b7280;
+}
+
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+
+@media (max-width: 1000px) {
+
+  .expert-admin-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+}
+
+@media (max-width: 700px) {
+
+  .admin-header {
+    padding: 0 20px;
+  }
+
+  .admin-experts-content {
+    padding: 28px 20px 50px;
+  }
+
+  .admin-page-heading {
+    align-items: flex-start;
+
+    flex-direction: column;
+
+    gap: 15px;
+  }
+
+  .expert-admin-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-expert-ai {
+    align-items: flex-start;
+
+    flex-direction: column;
+  }
+
+  .admin-expert-controls {
+    flex-direction: column;
+  }
+
+  .admin-expert-controls select {
+    width: 100%;
+  }
+
+}
+
+@media (max-width: 450px) {
+
+  .admin-brand h1 {
+    font-size: 20px;
+  }
+
+  .admin-profile-info,
+  .admin-profile > i {
+    display: none;
+  }
+
+  .admin-page-heading h2 {
+    font-size: 25px;
+  }
+
+  .expert-modal-details {
+    grid-template-columns: 1fr;
+  }
+
+}

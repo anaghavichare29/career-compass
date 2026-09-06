@@ -1,6 +1,6 @@
 import { useState } from "react";
-import api from "../src/axious";
-import "./login.css";
+import api from "../../services/api";
+import "./Login.css";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -8,6 +8,7 @@ function Login() {
 
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
     setError("");
@@ -24,6 +25,8 @@ function Login() {
     }
 
     try {
+      setLoading(true);
+
       const response = await api.post("auth/login/", {
         email: email.trim(),
         password: password,
@@ -33,22 +36,32 @@ function Login() {
 
       const user = response.data.user;
 
-      localStorage.setItem("user", JSON.stringify(user));
-
       console.log("Logged in user:", user);
       console.log("User role:", user.role);
 
-      if (user.role === "PROFESSIONAL") {
-        window.location.href = "/industry-experts";
-      } else if (user.role === "STUDENT") {
+      localStorage.setItem("user", JSON.stringify(user));
+
+      setMessage("Login successful!");
+
+      if (user.role === "STUDENT") {
         window.location.href = "/student/dashboard";
-      } else if (user.role === "MENTOR") {
-        window.location.href = "/mentor/dashboard";
+      } else if (user.role === "ADMIN") {
+        window.location.href = "/admin/dashboard";
+      } else if (user.role === "PROFESSIONAL") {
+        window.location.href = "/industry-experts/dashboard";
+      } else {
+        setError("Invalid user role.");
       }
     } catch (error) {
-      console.error("Login error:", error.response?.data);
+      console.error("Login error:", error.response?.data || error.message);
 
-      setError("Invalid email or password.");
+      if (error.response?.status === 401) {
+        setError("Invalid email or password.");
+      } else {
+        setError("Unable to connect to the server. Please try again.");
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -112,8 +125,13 @@ function Login() {
             <a href="#">Forgot Password?</a>
           </div>
 
-          <button type="button" className="login-button" onClick={handleLogin}>
-            Login
+          <button
+            type="button"
+            className="login-button"
+            onClick={handleLogin}
+            disabled={loading}
+          >
+            {loading ? "Logging in..." : "Login"}
           </button>
 
           <p className="register-text">

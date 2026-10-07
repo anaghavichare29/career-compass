@@ -107,7 +107,42 @@ class AssessmentSubmitView(APIView):
             for c in top_careers
         ])
 
-                # 7. Generate a roadmap from the top career match
+        # 7. Update student academic info in students table
+        try:
+            from django.db import connection
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT student_id FROM students WHERE user_id = %s", [user_id])
+                row = cursor.fetchone()
+                degree = academic_info.get("degree", "").strip()
+                branch = academic_info.get("branch", "").strip()
+                course_str = f"{degree} in {branch}" if (degree and branch) else (degree or branch)
+                semester = academic_info.get("semester", "")
+                year_val = None
+                if semester:
+                    try:
+                        year_val = max(1, (int(semester) + 1) // 2)
+                    except Exception:
+                        year_val = None
+                score_val = None
+                try:
+                    score_val = float(academic_info.get("cgpa"))
+                except Exception:
+                    pass
+
+                if row:
+                    cursor.execute(
+                        "UPDATE students SET course = COALESCE(NULLIF(%s, ''), course), year = COALESCE(%s, year), academic_score = COALESCE(%s, academic_score) WHERE user_id = %s",
+                        [course_str, year_val, score_val, user_id]
+                    )
+                else:
+                    cursor.execute(
+                        "INSERT INTO students (user_id, college, course, year, academic_score) VALUES (%s, %s, %s, %s, %s)",
+                        [user_id, "College of Engineering", course_str or "B.Tech IT", year_val or 3, score_val or 8.5]
+                    )
+        except Exception as e:
+            print(f"Error updating students academic record: {e}")
+
+        # 8. Generate a roadmap and tasks from the top career match
         if top_careers:
             top = top_careers[0]
             matched_skill_names = set(
@@ -117,14 +152,34 @@ class AssessmentSubmitView(APIView):
             career_obj = CareerDefinition.objects.filter(name=top["career_name"]).first()
             if career_obj:
                 _generate_roadmap(user_id, career_obj, matched_skill_names)
+
+        # 9. Send notification
+        try:
+            from django.db import connection
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "INSERT INTO notifications (user_id, title, message, type) VALUES (%s, %s, %s, %s)",
+                    [
+                        user_id,
+                        "Career Assessment Complete!",
+                        f"Your assessment has been evaluated. Your top recommendation is {top_careers[0]['career_name'] if top_careers else 'available'} with a personalized roadmap and learning tasks.",
+                        "assessment",
+                    ]
+                )
+        except Exception:
+            pass
+
         return Response(
             {"detail": "Assessment submitted and recommendations generated.",
-             "recommendations_created": len(top_careers)},
+             "recommendations_created": len(top_careers),
+             "top_career": top_careers[0]["career_name"] if top_careers else None},
             status=status.HTTP_201_CREATED,
         )
 
 def _generate_roadmap(user_id, career, matched_skill_names):
     from roadmaps.models import RoadmapStage, RoadmapSkill
+    from tasks.models import Task
+    import datetime
 
     STAGE_TEMPLATE = ["Foundation", "Core Skills", "Specialization", "Portfolio & Projects"]
     STAGE_DURATIONS = ["2–3 Weeks", "3–4 Weeks", "3–4 Weeks", "2–3 Weeks"]
@@ -136,6 +191,7 @@ def _generate_roadmap(user_id, career, matched_skill_names):
     ]
 
     RoadmapStage.objects.filter(user_id=user_id).delete()
+    Task.objects.filter(user_id=user_id, ai_recommended=True).delete()
 
     all_skills = career.skills_list()
     if not all_skills:
@@ -147,6 +203,8 @@ def _generate_roadmap(user_id, career, matched_skill_names):
         buckets[index % stage_count].append(skill)
 
     current_assigned = False
+    today = datetime.date.today()
+    stage_days = [14, 28, 45, 60]
 
     for stage_index, skill_names in enumerate(buckets):
         if not skill_names:
@@ -162,17 +220,37 @@ def _generate_roadmap(user_id, career, matched_skill_names):
         )
 
         stage_statuses = []
+        deadline_date = today + datetime.timedelta(days=stage_days[min(stage_index, len(stage_days) - 1)])
+
         for skill_name in skill_names:
             if skill_name in matched_skill_names:
                 status, progress = 'completed', 100
+                completed_lessons = 8
             elif not current_assigned:
                 status, progress = 'current', 40
+                completed_lessons = 3
                 current_assigned = True
             else:
                 status, progress = 'upcoming', 0
+                completed_lessons = 0
 
             RoadmapSkill.objects.create(stage=stage, name=skill_name, status=status, progress=progress)
             stage_statuses.append(status)
+
+            # Generate suggested course & task
+            Task.objects.create(
+                user_id=user_id,
+                title=f"Master {skill_name}: Core Concepts & Practice",
+                description=f"Follow structured module lessons and practical assignments for {skill_name} in stage '{stage.name}'.",
+                skill=skill_name,
+                course_name=f"{skill_name} Fundamentals Course",
+                deadline=deadline_date,
+                completed_lessons=completed_lessons,
+                total_lessons=8,
+                priority='High' if stage_index == 0 else ('Medium' if stage_index == 1 else 'Low'),
+                ai_recommended=True,
+                status='Completed' if completed_lessons >= 8 else ('In Progress' if completed_lessons > 0 else 'Not Started'),
+            )
 
         if all(s == 'completed' for s in stage_statuses):
             stage.status = 'completed'
@@ -181,3 +259,7 @@ def _generate_roadmap(user_id, career, matched_skill_names):
         else:
             stage.status = 'upcoming'
         stage.save()
+
+    # Recalculate progress summary
+    from tasks.views import _recalculate_user_progress
+    _recalculate_user_progress(user_id)

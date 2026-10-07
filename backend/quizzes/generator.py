@@ -1,30 +1,83 @@
 import json
 import os
 import random
+import concurrent.futures
 
-from google import genai
+try:
+    from google import genai
+except ImportError:
+    genai = None
 
 from .models import Quiz, QuizQuestion
 from .question_bank import QUESTION_BANK, GENERIC_TEMPLATES
 
-NUM_QUESTIONS_PER_QUIZ = 5
+NUM_QUESTIONS_PER_QUIZ = 10
 
 _client = None
+
+SKILL_ALIASES = {
+    "programming": "Programming",
+    "python": "Python",
+    "sql": "SQL",
+    "excel": "Excel",
+    "statistics": "Statistics",
+    "data analysis": "Data Analysis",
+    "data visualization": "Data Visualization",
+    "machine learning": "Machine Learning",
+    "data structures": "Programming",
+    "algorithms": "Programming",
+    "git": "Programming",
+    "problem solving": "Programming",
+    "react": "Programming",
+    "node.js": "Programming",
+    "javascript": "Programming",
+    "apis": "Programming",
+    "communication": "Communication",
+    "prioritization": "Product Management",
+    "market research": "Product Management",
+    "roadmapping": "Product Management",
+    "product management": "Product Management",
+    "analytics": "Data Analysis",
+    "general aptitude": "General Aptitude",
+}
 
 
 def _get_client():
     global _client
+    if genai is None:
+        return None
     if _client is None:
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             return None
-        _client = genai.Client(api_key=api_key)
+        try:
+            _client = genai.Client(api_key=api_key)
+        except Exception as e:
+            print(f"Error initializing GenAI client: {e}")
+            return None
     return _client
 
 
+def _fetch_gemini_response(client, prompt):
+    # Try gemini-3.8-flash first, then gemini-2.5-flash / gemini-2.0-flash
+    models = ["gemini-3.8-flash", "gemini-2.5-flash", "gemini-2.0-flash"]
+    for model_name in models:
+        try:
+            response = client.models.generate_content(
+                model=model_name,
+                contents=prompt,
+            )
+            if response and response.text:
+                return response.text
+        except Exception as e:
+            print(f"Gemini generation with {model_name} failed: {e}")
+            continue
+    return None
+
+
 def _generate_with_gemini(skill, difficulty):
-    """Asks Gemini for quiz questions. Returns None if it fails for any reason,
-    so the caller can fall back to the offline question bank."""
+    """Asks Gemini for quiz questions with a 4-second timeout.
+    Returns None if it fails, times out, or is busy, so the caller can fall back to the offline question bank."""
     client = _get_client()
     if client is None:
         return None
@@ -39,50 +92,70 @@ Respond with ONLY valid JSON, no markdown formatting, no code fences, in this ex
 ]
 
 Rules:
+- Exactly {NUM_QUESTIONS_PER_QUIZ} questions.
 - Exactly 4 options per question.
 - correct_index is the 0-based index of the correct option.
 - Questions must be clear, factually correct, and specific to "{skill}".
 """
 
     try:
-        response = client.models.generate_content(
-            model="gemini-3.6-flash",
-            contents=prompt,
-        )
-        text = response.text.strip()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(_fetch_gemini_response, client, prompt)
+            text = future.result(timeout=4.0)
 
-        # Strip markdown code fences if Gemini adds them anyway
+        if not text:
+            return None
+
+        text = text.strip()
         if text.startswith("```"):
-            text = text.split("```")[1]
+            parts = text.split("```")
+            text = parts[1] if len(parts) > 1 else text
             if text.startswith("json"):
-                text = text[4:]
+                text = text[4:].strip()
 
         questions = json.loads(text)
 
-        # Basic validation — if malformed, treat as a failure
+        # Basic validation
+        valid_questions = []
         for q in questions:
-            if not all(k in q for k in ("question", "options", "correct_index")):
-                return None
-            if len(q["options"]) != 4:
-                return None
+            if all(k in q for k in ("question", "options", "correct_index")) and len(q["options"]) == 4:
+                valid_questions.append(q)
 
-        return questions[:NUM_QUESTIONS_PER_QUIZ]
+        if len(valid_questions) >= NUM_QUESTIONS_PER_QUIZ:
+            return valid_questions[:NUM_QUESTIONS_PER_QUIZ]
+
+        return None
 
     except Exception as e:
-        print(f"Gemini quiz generation failed, falling back to question bank: {e}")
+        print(f"Gemini quiz generation failed/busy, falling back to backup question bank: {e}")
         return None
 
 
 def _build_question_pool_offline(skill):
-    """Offline fallback — same logic as before, used if Gemini fails or has no key."""
-    bank_questions = list(QUESTION_BANK.get(skill, []))
+    """Offline fallback — fetches 10 random questions from the backup bank for that quiz."""
+    key = SKILL_ALIASES.get(skill.lower().strip(), skill)
+    bank_questions = list(QUESTION_BANK.get(key, []))
+
+    if not bank_questions:
+        # Check partial match in QUESTION_BANK
+        for bank_key, q_list in QUESTION_BANK.items():
+            if bank_key.lower() in skill.lower() or skill.lower() in bank_key.lower():
+                bank_questions = list(q_list)
+                break
+
+    if not bank_questions:
+        bank_questions = list(QUESTION_BANK.get("General Aptitude", []))
+
     random.shuffle(bank_questions)
 
     if len(bank_questions) >= NUM_QUESTIONS_PER_QUIZ:
         return bank_questions[:NUM_QUESTIONS_PER_QUIZ]
 
     needed = NUM_QUESTIONS_PER_QUIZ - len(bank_questions)
-    generic_pool = random.sample(GENERIC_TEMPLATES, min(needed, len(GENERIC_TEMPLATES)))
+    templates = list(GENERIC_TEMPLATES)
+    random.shuffle(templates)
+    generic_pool = templates[:needed]
+
     generic_filled = [
         {
             "question": q["question"].format(skill=skill),
@@ -91,7 +164,10 @@ def _build_question_pool_offline(skill):
         }
         for q in generic_pool
     ]
-    return bank_questions + generic_filled
+
+    combined = bank_questions + generic_filled
+    random.shuffle(combined)
+    return combined[:NUM_QUESTIONS_PER_QUIZ]
 
 
 def generate_quiz_for_skill(user_id, skill, source='ai', status='approved'):
@@ -105,9 +181,9 @@ def generate_quiz_for_skill(user_id, skill, source='ai', status='approved'):
         user_id=user_id,
         title=f"{skill} Quiz",
         skill=skill,
-        description=f"Test your knowledge of {skill} with this short quiz.",
+        description=f"Test your knowledge of {skill} with this 10-question quiz.",
         difficulty=difficulty,
-        duration_minutes=NUM_QUESTIONS_PER_QUIZ * 2,
+        duration_minutes=15,
         source=source,
         status=status,
         ai_recommended=(source == 'ai'),

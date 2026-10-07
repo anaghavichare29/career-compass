@@ -14,6 +14,13 @@ class Task(models.Model):
     total_lessons = models.PositiveIntegerField(default=1)
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='Medium')
     ai_recommended = models.BooleanField(default=False)
+    status = models.CharField(max_length=30, default='Not Started')
+    mentor_id = models.IntegerField(null=True, blank=True)
+    assigned_by_mentor = models.BooleanField(default=False)
+    submission_notes = models.TextField(blank=True, default='')
+    submission_file = models.CharField(max_length=255, blank=True, default='')
+    mentor_feedback = models.TextField(blank=True, default='')
+    submitted_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = 'tasks'

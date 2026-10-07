@@ -70,7 +70,7 @@ class GenerateNewQuizView(APIView):
 
 
 class SubmitQuizAttemptView(APIView):
-    """POST /api/quizzes/<id>/submit/  body: { user_id, answers: {question_id: selected_index, ...} }"""
+    """POST /api/quizzes/<id>/submit/  body: { user_id, answers: {question_id: selected_index, ...}, is_time_bound, time_taken_seconds }"""
 
     def post(self, request, pk):
         try:
@@ -80,6 +80,8 @@ class SubmitQuizAttemptView(APIView):
 
         user_id = request.data.get('user_id')
         answers = request.data.get('answers', {})  # { "12": 1, "13": 0, ... }
+        is_time_bound = request.data.get('is_time_bound', True)
+        time_taken_seconds = request.data.get('time_taken_seconds', 0)
 
         questions = quiz.questions.all()
         score = 0
@@ -93,7 +95,35 @@ class SubmitQuizAttemptView(APIView):
             quiz=quiz,
             score=score,
             total_questions=questions.count(),
+            is_time_bound=is_time_bound,
+            time_taken_seconds=time_taken_seconds,
         )
+
+        # Update progress summary
+        from progress.models import ProgressSummary
+        total_quizzes = Quiz.objects.filter(user_id=user_id, status='approved').count()
+        if total_quizzes > 0:
+            distinct_attempted = QuizAttempt.objects.filter(user_id=user_id).values('quiz_id').distinct().count()
+            quiz_percent = min(100, round((distinct_attempted / total_quizzes) * 100))
+            ps, _ = ProgressSummary.objects.get_or_create(user_id=user_id)
+            ps.quiz_progress_percent = quiz_percent
+            ps.save()
+
+        # Add notification
+        try:
+            from django.db import connection
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "INSERT INTO notifications (user_id, title, message, type) VALUES (%s, %s, %s, %s)",
+                    [
+                        user_id,
+                        f"Quiz Result: {quiz.title}",
+                        f"You scored {score}/{questions.count()} on {quiz.title} ({'Time-Bound' if is_time_bound else 'Self-Paced'} mode).",
+                        "quiz",
+                    ]
+                )
+        except Exception:
+            pass
 
         return Response(QuizAttemptSerializer(attempt).data, status=status.HTTP_201_CREATED)
 
@@ -130,6 +160,21 @@ class CreateStudentQuizView(APIView):
             for q in data['questions']
         ])
 
+        try:
+            from django.db import connection
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "INSERT INTO notifications (user_id, title, message, type) VALUES (%s, %s, %s, %s)",
+                    [
+                        data['user_id'],
+                        f"Quiz '{data['title']}' Submitted for Evaluation",
+                        "Your quiz has been sent to industry experts for review. Once approved, it will be posted for other students.",
+                        "quiz",
+                    ]
+                )
+        except Exception:
+            pass
+
         return Response({"detail": "Quiz submitted for expert review.", "quiz_id": quiz.id}, status=status.HTTP_201_CREATED)
 
 
@@ -156,6 +201,22 @@ class ReviewQuizView(APIView):
         quiz.reviewed_by_user_id = request.data.get('reviewer_user_id')
         quiz.review_notes = request.data.get('notes', '')
         quiz.save()
+
+        try:
+            from django.db import connection
+            with connection.cursor() as cursor:
+                notes_msg = f" Notes: {quiz.review_notes}" if quiz.review_notes else ""
+                cursor.execute(
+                    "INSERT INTO notifications (user_id, title, message, type) VALUES (%s, %s, %s, %s)",
+                    [
+                        quiz.user_id,
+                        f"Quiz Evaluation: {quiz.title} {decision.capitalize()}",
+                        f"Your submitted quiz was {decision} by an industry expert.{notes_msg}",
+                        "quiz",
+                    ]
+                )
+        except Exception:
+            pass
 
         return Response({"detail": f"Quiz {decision}."}, status=status.HTTP_200_OK)
 

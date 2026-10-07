@@ -62,6 +62,8 @@ class QuizAttempt(models.Model):
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name='attempts')
     score = models.PositiveIntegerField()          # number correct
     total_questions = models.PositiveIntegerField()
+    is_time_bound = models.BooleanField(default=True)
+    time_taken_seconds = models.PositiveIntegerField(default=0)
     completed_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

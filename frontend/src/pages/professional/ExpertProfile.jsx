@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import api from "../../services/api";
 import "./expert-profile.css";
 
 const expertsData = [
@@ -329,36 +330,31 @@ const expertsData = [
 
 
 const ExpertProfile = () => {
-
-  /* =====================================================
-     GET EXPERT FROM URL
-     Example: /industry-experts/1
-  ===================================================== */
-
   const pathParts = window.location.pathname.split("/");
-
   const expertId = Number(pathParts[2]);
 
-  const expert =
-    expertsData.find(
-      (item) => item.id === expertId
-    ) || expertsData[0];
+  const defaultExpert =
+    expertsData.find((item) => item.id === expertId) || expertsData[0];
 
+  const [expert, setExpert] = useState(defaultExpert);
 
-  /* =====================================================
-     NAVIGATION
-  ===================================================== */
+  useEffect(() => {
+    api
+      .get(`mentorship/experts/${expertId}/`)
+      .then((res) => {
+        if (res.data) setExpert(res.data);
+      })
+      .catch((err) => {
+        console.warn("Using fallback expert data:", err);
+      });
+  }, [expertId]);
 
   const goBack = () => {
-    window.location.href = "/industry-experts";
+    window.location.href = "/industry-experts/dashboard";
   };
 
-
   const handleConnect = () => {
-
-    window.location.href =
-      `/industry-experts/${expert.id}/guidance`;
-
+    window.location.href = `/industry-experts/${expert.id}/guidance`;
   };
 
 

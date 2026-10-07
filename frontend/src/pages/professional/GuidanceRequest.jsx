@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import api from "../../services/api";
 import "./guidance-request.css";
 
-const expertsData = {
+const fallbackExperts = {
   1: {
     name: "Priya Sharma",
     role: "Software Engineer",
@@ -23,36 +24,13 @@ const expertsData = {
     domain: "Product Management",
     initials: "NS",
   },
-  4: {
-    name: "Arjun Kapoor",
-    role: "Cybersecurity Engineer",
-    company: "Cisco",
-    domain: "Cybersecurity",
-    initials: "AK",
-  },
-  5: {
-    name: "Aisha Khan",
-    role: "Cloud Engineer",
-    company: "Amazon Web Services",
-    domain: "Cloud Computing",
-    initials: "AK",
-  },
-  6: {
-    name: "Rohan Desai",
-    role: "Full Stack Developer",
-    company: "Infosys",
-    domain: "Web Development",
-    initials: "RD",
-  },
 };
 
 function GuidanceRequest() {
   const pathParts = window.location.pathname.split("/");
-  const expertId = Number(pathParts[2]);
+  const expertId = Number(pathParts[2]) || 1;
 
-  const expert =
-    expertsData[expertId] || expertsData[1];
-
+  const [expert, setExpert] = useState(fallbackExperts[expertId] || fallbackExperts[1]);
   const [formData, setFormData] = useState({
     topic: "",
     message: "",
@@ -60,43 +38,55 @@ function GuidanceRequest() {
   });
 
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    api
+      .get(`mentorship/experts/${expertId}/`)
+      .then((res) => {
+        if (res.data) setExpert(res.data);
+      })
+      .catch((err) => {
+        console.warn("Could not fetch remote expert, using fallback:", err);
+      });
+  }, [expertId]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-
     setFormData((previous) => ({
       ...previous,
       [name]: value,
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (!formData.topic.trim() || !formData.message.trim()) {
+      alert("Please fill in the topic and message.");
+      return;
+    }
 
-    /*
-      FRONTEND PLACEHOLDER
-
-      Later this will send the request to Django/backend.
-
-      Example future flow:
-
-      Student
-        ↓
-      Guidance Request
-        ↓
-      Django API
-        ↓
-      Industry Expert
-        ↓
-      Request Status
-    */
-
-    setSubmitted(true);
+    try {
+      setLoading(true);
+      await api.post("mentorship/requests/", {
+        student_id: user?.user_id,
+        mentor_id: expertId,
+        topic: formData.topic.trim(),
+        message: formData.message.trim(),
+        goals: formData.goals.trim(),
+      });
+      setSubmitted(true);
+    } catch (err) {
+      console.error("Failed to submit guidance request:", err);
+      alert("Failed to submit guidance request. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const goBack = () => {
-    window.location.href =
-      `/industry-experts/${expertId}`;
+    window.location.href = `/industry-experts/${expertId}`;
   };
 
   if (submitted) {

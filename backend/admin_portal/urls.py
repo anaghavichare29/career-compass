@@ -1,0 +1,38 @@
+from django.urls import path
+from .views import (
+    AdminStatsView,
+    AdminStudentsListView,
+    AdminStudentDetailView,
+    AdminUserToggleStatusView,
+    AdminExpertsListView,
+    AdminExpertVerifyView,
+    AdminCareersView,
+    AdminSkillsView,
+    AdminAssessmentsView,
+    AdminQuizzesView,
+    AdminInteractionsView,
+    AdminComplaintsView,
+    AdminComplaintResolveView,
+    AdminAnnouncementsView,
+    AdminFeedbackView,
+    AdminAnalyticsReportsView,
+)
+
+urlpatterns = [
+    path('stats/', AdminStatsView.as_view(), name='admin-stats'),
+    path('students/', AdminStudentsListView.as_view(), name='admin-students'),
+    path('students/<int:student_id>/', AdminStudentDetailView.as_view(), name='admin-student-detail'),
+    path('users/<int:user_id>/toggle-status/', AdminUserToggleStatusView.as_view(), name='admin-user-toggle-status'),
+    path('experts/', AdminExpertsListView.as_view(), name='admin-experts'),
+    path('experts/<int:prof_id>/verify/', AdminExpertVerifyView.as_view(), name='admin-expert-verify'),
+    path('careers/', AdminCareersView.as_view(), name='admin-careers'),
+    path('skills/', AdminSkillsView.as_view(), name='admin-skills'),
+    path('assessments/', AdminAssessmentsView.as_view(), name='admin-assessments'),
+    path('quizzes/', AdminQuizzesView.as_view(), name='admin-quizzes'),
+    path('interactions/', AdminInteractionsView.as_view(), name='admin-interactions'),
+    path('complaints/', AdminComplaintsView.as_view(), name='admin-complaints'),
+    path('complaints/<int:pk>/resolve/', AdminComplaintResolveView.as_view(), name='admin-complaint-resolve'),
+    path('announcements/', AdminAnnouncementsView.as_view(), name='admin-announcements'),
+    path('feedback/', AdminFeedbackView.as_view(), name='admin-feedback'),
+    path('analytics/', AdminAnalyticsReportsView.as_view(), name='admin-analytics'),
+]

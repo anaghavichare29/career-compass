@@ -29,7 +29,7 @@ SECRET_KEY = 'django-insecure-!qyrc7&+e6*g(2_wb%aaffb1cza7rdytxekz@a0i3ukxm*wub1
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -50,6 +50,10 @@ INSTALLED_APPS = [
     'progress',
     'assessments',
     'quizzes',
+    'students',
+    'mentorship',
+    'notifications',
+    'admin_portal',
 ]
 
 MIDDLEWARE = [

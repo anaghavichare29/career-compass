@@ -26,5 +26,9 @@ urlpatterns = [
     path('api/careers/', include('careers.urls')),
     path('api/progress/', include('progress.urls')),
     path('api/assessments/', include('assessments.urls')),
-    path('api/quizzes/', include('quizzes.urls'))
+    path('api/quizzes/', include('quizzes.urls')),
+    path('api/students/', include('students.urls')),
+    path('api/mentorship/', include('mentorship.urls')),
+    path('api/notifications/', include('notifications.urls')),
+    path('api/admin-portal/', include('admin_portal.urls')),
 ]

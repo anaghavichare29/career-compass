@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import StudentLayout from "../../components/student/StudentLayout";
 import api from "../../services/api";
+import "./StudentDashboard.css";
+import "./StudentIndustryProfessionals.css";
 
 const StudentProfessionalProfile = () => {
   const pathParts = window.location.pathname.split("/");

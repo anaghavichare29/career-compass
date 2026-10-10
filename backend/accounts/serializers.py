@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.hashers import check_password
+from django.db import connection
 from .models import User
 
 
@@ -59,6 +60,18 @@ class LoginSerializer(serializers.Serializer):
         if not check_password(password, user.password):
             raise serializers.ValidationError(
                 "Invalid email or password."
+            )
+
+        # The legacy users table stores account status in a separate `status`
+        # column; it is intentionally not part of the unmanaged User model.
+        # Enforce the status here so deactivated accounts cannot authenticate.
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT status FROM users WHERE user_id = %s", [user.user_id])
+            status_row = cursor.fetchone()
+        account_status = (status_row[0] if status_row else None) or "Active"
+        if str(account_status).strip().lower() not in ("active", "approved"):
+            raise serializers.ValidationError(
+                "This account has been deactivated. Please contact an administrator."
             )
 
         attrs['user'] = user

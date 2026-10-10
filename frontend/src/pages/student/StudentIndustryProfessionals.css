@@ -1,0 +1,419 @@
+/* =====================================================
+   STUDENT INDUSTRY PROFESSIONALS STYLES
+   State-of-the-art modern mentor directory
+===================================================== */
+
+.student-industry-container {
+  padding: 0 0 60px;
+}
+
+/* =====================================================
+   HERO BANNER
+===================================================== */
+.industry-hero-banner {
+  background: linear-gradient(135deg, #1e293b, #0f172a);
+  border-radius: 20px;
+  padding: 36px 40px;
+  color: #ffffff;
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 32px;
+  box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.25);
+}
+
+.industry-hero-banner::after {
+  content: "";
+  position: absolute;
+  top: -80px;
+  right: -80px;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.2) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.industry-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(147, 197, 253, 0.3);
+  color: #93c5fd;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.industry-hero-title {
+  font-size: 30px;
+  font-weight: 800;
+  margin: 0 0 10px;
+  letter-spacing: -0.5px;
+  color: #ffffff;
+}
+
+.industry-hero-desc {
+  font-size: 15px;
+  color: #94a3b8;
+  margin: 0 0 24px;
+  max-width: 720px;
+  line-height: 1.6;
+}
+
+.industry-hero-stats {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  flex-wrap: wrap;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.hero-stat-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+  color: #cbd5e1;
+  font-weight: 600;
+}
+
+.hero-stat-item i {
+  color: #38bdf8;
+  font-size: 16px;
+}
+
+/* =====================================================
+   SEARCH & FILTER CONTROLS
+===================================================== */
+.industry-filter-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-bottom: 32px;
+}
+
+.industry-search-input-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px;
+  height: 52px;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.03);
+  transition: all 0.2s ease;
+}
+
+.industry-search-input-box:focus-within {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+}
+
+.industry-search-input-box i {
+  color: #94a3b8;
+  font-size: 18px;
+}
+
+.industry-search-input-box input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 14.5px;
+  font-family: inherit;
+  color: #0f172a;
+}
+
+.industry-search-input-box input::placeholder {
+  color: #94a3b8;
+}
+
+.search-clear-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  font-size: 14px;
+}
+
+.search-clear-btn:hover {
+  color: #0f172a;
+}
+
+/* Domain Filter Pills */
+.industry-domain-pills {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  scrollbar-width: none;
+}
+
+.industry-domain-pills::-webkit-scrollbar {
+  display: none;
+}
+
+.domain-pill-btn {
+  padding: 8px 16px;
+  border-radius: 30px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.18s ease;
+}
+
+.domain-pill-btn:hover {
+  border-color: #93c5fd;
+  color: #2563eb;
+  background: #eff6ff;
+}
+
+.domain-pill-btn.active {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+}
+
+/* =====================================================
+   MENTOR CARDS GRID
+===================================================== */
+.professional-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 24px;
+}
+
+.student-expert-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.03);
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.student-expert-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.student-expert-card:hover {
+  transform: translateY(-4px);
+  border-color: #cbd5e1;
+  box-shadow: 0 16px 32px -6px rgba(15, 23, 42, 0.09);
+}
+
+.student-expert-card:hover::before {
+  opacity: 1;
+}
+
+/* Card Header */
+.expert-card-header-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.expert-card-avatar {
+  width: 54px;
+  height: 54px;
+  min-width: 54px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 800;
+  box-shadow: 0 6px 16px rgba(79, 70, 229, 0.25);
+  position: relative;
+}
+
+.expert-avatar-status-dot {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #10b981;
+  border: 2px solid #ffffff;
+}
+
+.expert-card-meta {
+  flex: 1;
+}
+
+.expert-card-meta h3 {
+  margin: 0 0 3px;
+  font-size: 17px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.expert-card-meta .expert-role-title {
+  font-size: 13.5px;
+  color: #334155;
+  font-weight: 600;
+  margin: 0 0 3px;
+}
+
+.expert-card-meta .expert-company-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #2563eb;
+  background: #eff6ff;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.verified-expert-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+/* Badge Tags Row */
+.expert-badges-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.expert-badge-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.expert-badge-chip.domain {
+  background: #f5f3ff;
+  color: #7c3aed;
+  border: 1px solid #ede9fe;
+}
+
+/* Skills list */
+.expert-skills-block {
+  margin-bottom: 20px;
+}
+
+.expert-skills-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #94a3b8;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.expert-skill-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.expert-skill-chip {
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 3px 9px;
+  border-radius: 6px;
+}
+
+/* Card CTA */
+.expert-card-footer {
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.expert-connect-button {
+  width: 100%;
+  padding: 11px 18px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #ffffff;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-decoration: none;
+  /* box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2); */
+  transition: all 0.2s ease;
+}
+
+.expert-connect-button:hover {
+  background: linear-gradient(135deg, #1d4ed8, #1e40af);
+  transform: translateY(-1px);
+  /* box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3); */
+}
+
+.expert-connect-button i {
+  transition: transform 0.2s ease;
+}
+
+.expert-connect-button:hover i {
+  transform: translateX(4px);
+}
+
+@media (max-width: 768px) {
+  .industry-hero-banner {
+    padding: 24px;
+  }
+  .industry-hero-title {
+    font-size: 24px;
+  }
+  .professional-card-grid {
+    grid-template-columns: 1fr;
+  }
+}

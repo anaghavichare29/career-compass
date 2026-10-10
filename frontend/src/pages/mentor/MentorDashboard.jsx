@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from "react";
 import api from "../../services/api";
+import MentorSidebar from "../../components/mentor/MentorSidebar";
+import MentorNavbar from "../../components/mentor/MentorNavbar";
+import "../../components/mentor/MentorLayout.css";
 import "./MentorDashboard.css";
 
 const MentorDashboard = () => {
@@ -315,99 +318,41 @@ const MentorDashboard = () => {
     }
   };
 
+  const getTabTitle = (tab) => {
+    switch (tab) {
+      case "overview": return "Mentor Overview";
+      case "requests": return "Mentorship Requests";
+      case "students": return "My Students";
+      case "assign": return "Assign Tasks & Roadmaps";
+      case "submissions": return "Review Student Submissions";
+      case "quizzes": return "Review Student Quizzes";
+      case "experience": return "Profile & Experience";
+      case "resources": return "Recommend Learning Resources";
+      default: return "Mentor Workspace";
+    }
+  };
+
   return (
-    <div className="mentor-page">
-      {/* Header */}
-      <header className="mentor-header">
-        <div className="mentor-brand" onClick={() => setActiveTab("overview")}>
-          <h1>Career<span>Compass</span> <span style={{ fontSize: "14px", fontWeight: "600", color: "#6366f1", background: "#eef2ff", padding: "3px 8px", borderRadius: "6px", marginLeft: "8px" }}>MENTOR WORKSPACE</span></h1>
-        </div>
+    <div className="student-layout mentor-layout">
+      {/* Sidebar matching Student Dashboard */}
+      <MentorSidebar
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
+        pendingCounts={{
+          requests: pendingRequestsCount,
+          students: students.length,
+          submissions: pendingSubmissionsCount,
+          quizzes: pendingQuizzesCount,
+        }}
+      />
 
-        <div className="mentor-header-right">
-          <div className="mentor-profile-badge">
-            <div className="mentor-avatar">{initial}</div>
-            <div>
-              <strong style={{ display: "block", fontSize: "14px", color: "#0f172a" }}>{fullName}</strong>
-              <small style={{ color: "#64748b" }}>{profile?.designation || "Industry Expert"} • {profile?.company || "Verified"}</small>
-            </div>
-          </div>
+      {/* Main Area matching Student Dashboard */}
+      <main className="student-main mentor-main">
+        {/* Top Navbar */}
+        <MentorNavbar pageTitle={getTabTitle(activeTab)} />
 
-          <button
-            onClick={() => {
-              localStorage.removeItem("user");
-              window.location.href = "/";
-            }}
-            className="mentor-action-btn outline"
-            style={{ display: "flex", alignItems: "center", gap: "6px" }}
-          >
-            <i className="bi bi-box-arrow-right"></i> Logout
-          </button>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="mentor-content">
-        {/* Navigation Tabs */}
-        <div className="mentor-nav-tabs">
-          <button
-            className={`mentor-tab-btn ${activeTab === "overview" ? "active" : ""}`}
-            onClick={() => setActiveTab("overview")}
-          >
-            <i className="bi bi-grid-1x2"></i> Overview
-          </button>
-
-          <button
-            className={`mentor-tab-btn ${activeTab === "requests" ? "active" : ""}`}
-            onClick={() => setActiveTab("requests")}
-          >
-            <i className="bi bi-inbox"></i> Mentorship Requests
-            {pendingRequestsCount > 0 && <span className="mentor-badge">{pendingRequestsCount}</span>}
-          </button>
-
-          <button
-            className={`mentor-tab-btn ${activeTab === "students" ? "active" : ""}`}
-            onClick={() => setActiveTab("students")}
-          >
-            <i className="bi bi-people"></i> My Students ({students.length})
-          </button>
-
-          <button
-            className={`mentor-tab-btn ${activeTab === "assign" ? "active" : ""}`}
-            onClick={() => setActiveTab("assign")}
-          >
-            <i className="bi bi-plus-circle"></i> Assign Tasks & Roadmaps
-          </button>
-
-          <button
-            className={`mentor-tab-btn ${activeTab === "submissions" ? "active" : ""}`}
-            onClick={() => setActiveTab("submissions")}
-          >
-            <i className="bi bi-check2-all"></i> Review Submissions
-            {pendingSubmissionsCount > 0 && <span className="mentor-badge">{pendingSubmissionsCount}</span>}
-          </button>
-
-          <button
-            className={`mentor-tab-btn ${activeTab === "quizzes" ? "active" : ""}`}
-            onClick={() => setActiveTab("quizzes")}
-          >
-            <i className="bi bi-question-diamond"></i> Review Student Quizzes
-            {pendingQuizzesCount > 0 && <span className="mentor-badge">{pendingQuizzesCount}</span>}
-          </button>
-
-          <button
-            className={`mentor-tab-btn ${activeTab === "experience" ? "active" : ""}`}
-            onClick={() => setActiveTab("experience")}
-          >
-            <i className="bi bi-person-lines-fill"></i> Share Experience & Profile
-          </button>
-
-          <button
-            className={`mentor-tab-btn ${activeTab === "resources" ? "active" : ""}`}
-            onClick={() => setActiveTab("resources")}
-          >
-            <i className="bi bi-bookmark-star"></i> Recommend Resources
-          </button>
-        </div>
+        {/* Tab Content Area */}
+        <div className="student-content mentor-content-area" style={{ padding: "32px 40px 60px" }}>
 
         {/* =========================================================
             TAB 1: OVERVIEW
@@ -1352,6 +1297,7 @@ const MentorDashboard = () => {
             </div>
           </div>
         )}
+        </div>
       </main>
 
       {/* =========================================================

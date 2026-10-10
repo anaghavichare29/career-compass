@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import api from "../../services/api";
+import MentorLayout from "../../components/mentor/MentorLayout";
+import StudentLayout from "../../components/student/StudentLayout";
 import "./guidance-request.css";
 
 const fallbackExperts = {
@@ -89,33 +91,14 @@ function GuidanceRequest() {
     window.location.href = `/industry-experts/${expertId}`;
   };
 
+  const currentUser = JSON.parse(localStorage.getItem("user") || "null");
+  const LayoutComponent = currentUser?.role === "STUDENT" ? StudentLayout : MentorLayout;
+  const layoutProps = currentUser?.role === "STUDENT" ? { pageTitle: "Request Guidance" } : { activePage: "directory", pageTitle: "Request Guidance" };
+
   if (submitted) {
     return (
-      <div className="guidance-page">
-
-        <header className="guidance-header">
-
-          <div className="guidance-brand">
-            CareerCompass
-          </div>
-
-          <div className="guidance-profile">
-
-            <div className="guidance-avatar">
-              A
-            </div>
-
-            <span>
-              Student
-            </span>
-
-          </div>
-
-        </header>
-
-
-        <main className="guidance-content">
-
+      <LayoutComponent {...layoutProps}>
+        <div className="guidance-content" style={{ padding: "32px 40px 60px", maxWidth: "900px", margin: "0 auto" }}>
           <section className="guidance-success-card">
 
             <div className="success-icon">
@@ -185,43 +168,14 @@ function GuidanceRequest() {
             </button>
 
           </section>
-
-        </main>
-
-      </div>
+        </div>
+      </LayoutComponent>
     );
   }
 
   return (
-    <div className="guidance-page">
-
-      {/* HEADER */}
-
-      <header className="guidance-header">
-
-        <div className="guidance-brand">
-          CareerCompass
-        </div>
-
-        <div className="guidance-profile">
-
-          <div className="guidance-avatar">
-            A
-          </div>
-
-          <span>
-            Student
-          </span>
-
-        </div>
-
-      </header>
-
-
-      {/* CONTENT */}
-
-      <main className="guidance-content">
-
+    <LayoutComponent {...layoutProps}>
+      <div className="guidance-content" style={{ padding: "32px 40px 60px", maxWidth: "1200px", margin: "0 auto" }}>
         <button
           className="guidance-back-button"
           onClick={goBack}
@@ -507,9 +461,8 @@ function GuidanceRequest() {
 
         </section>
 
-      </main>
-
-    </div>
+      </div>
+    </LayoutComponent>
   );
 }
 

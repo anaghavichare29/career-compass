@@ -34,6 +34,9 @@ class RoadmapSkill(models.Model):
     name = models.CharField(max_length=100)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES)
     progress = models.PositiveIntegerField(default=0)
+    what_to_learn = models.TextField(blank=True)
+    why_it_matters = models.TextField(blank=True)
+    resources = models.JSONField(default=list, blank=True)
 
     class Meta:
         db_table = 'roadmap_skills'

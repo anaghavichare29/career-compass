@@ -156,23 +156,29 @@ class AdminUserToggleStatusView(APIView):
         if not user:
             return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        new_status = request.data.get("status")
-        if not new_status:
-            current = user.status or "Active"
-            new_status = "Inactive" if current == "Active" else "Active"
-
         with connection.cursor() as cursor:
-            cursor.execute("UPDATE users SET status = %s WHERE user_id = %s", [new_status, user_id])
+            cursor.execute("SELECT status FROM users WHERE user_id = %s", [user_id])
+            row = cursor.fetchone()
+            current = (row[0] if row and row[0] else "Active")
+            requested_status = request.data.get("status")
+            if requested_status:
+                normalized = str(requested_status).strip().lower()
+                if normalized not in ("active", "inactive"):
+                    return Response({"detail": "status must be Active or Inactive."}, status=status.HTTP_400_BAD_REQUEST)
+                new_status = "Active" if normalized == "active" else "Inactive"
+            else:
+                new_status = "Inactive" if current.lower() == "active" else "Active"
 
-            cursor.execute(
-                "INSERT INTO notifications (user_id, title, message, type) VALUES (%s, %s, %s, %s)",
-                [
-                    user_id,
-                    f"Account Status Updated: {new_status}",
-                    f"Your CareerCompass account has been set to {new_status} by platform administration.",
-                    "admin",
-                ]
-            )
+            cursor.execute("UPDATE users SET status = %s WHERE user_id = %s", [new_status, user_id])
+            try:
+                cursor.execute(
+                    "INSERT INTO notifications (user_id, title, message, type) VALUES (%s, %s, %s, %s)",
+                    [user_id, f"Account Status Updated: {new_status}",
+                     f"Your CareerCompass account has been set to {new_status} by platform administration.", "admin"]
+                )
+            except Exception:
+                # Status changes should not fail just because notifications are unavailable.
+                pass
 
         return Response({"detail": f"User status updated to {new_status}.", "status": new_status}, status=status.HTTP_200_OK)
 

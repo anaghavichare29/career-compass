@@ -24,7 +24,8 @@ class RegisterView(APIView):
                         "first_name": user.first_name,
                         "last_name": user.last_name,
                         "email": user.email,
-                        "role": user.role
+                        "role": user.role,
+                        "status": "Active"
                     }
                 },
                 status=status.HTTP_201_CREATED
@@ -55,7 +56,8 @@ class LoginView(APIView):
                         "first_name": user.first_name,
                         "last_name": user.last_name,
                         "email": user.email,
-                        "role": user.role
+                        "role": user.role,
+                        "status": "Active"
                     }
                 },
                 status=status.HTTP_200_OK

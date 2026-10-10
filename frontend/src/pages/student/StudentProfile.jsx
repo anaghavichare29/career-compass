@@ -14,25 +14,18 @@ const StudentProfile = () => {
     firstName: user?.first_name || "Student",
     lastName: user?.last_name || "",
     email: user?.email || "",
-    phone: "+91 98765 43210",
-    college: "Vidyalankar Institute of Technology",
-    course: "B.Tech Information Technology",
-    year: "3rd Year",
-    careerGoal: "Data Analyst",
-    location: "Mumbai, India",
-    bio: "B.Tech IT student interested in AI/ML, data analysis and building practical technology solutions.",
+    phone: "",
+    college: "",
+    course: "",
+    year: "",
+    careerGoal: "",
+    location: "",
+    bio: "",
   });
 
-  const [skills, setSkills] = useState([
-    "Python",
-    "SQL",
-    "Excel",
-    "React",
-    "HTML/CSS",
-    "Git",
-  ]);
+  const [skills, setSkills] = useState([]);
 
-  const [completion, setCompletion] = useState(85);
+  const [completion, setCompletion] = useState(0);
   const [newSkill, setNewSkill] = useState("");
 
   useEffect(() => {
@@ -52,17 +45,13 @@ const StudentProfile = () => {
           phone: d.phone || "",
           college: d.college || "",
           course: d.course || "",
-          year: d.year || "3rd Year",
-          careerGoal: d.careerGoal || "Data Analyst",
-          location: d.location || "Mumbai, India",
+          year: d.year || "",
+          careerGoal: d.careerGoal || "",
+          location: d.location || "",
           bio: d.bio || "",
         });
-        if (d.skills && d.skills.length > 0) {
-          setSkills(d.skills);
-        }
-        if (d.completion) {
-          setCompletion(d.completion);
-        }
+        setSkills(Array.isArray(d.skills) ? d.skills : []);
+        setCompletion(Number.isFinite(d.completion) ? d.completion : 0);
       })
       .catch((err) => {
         console.error("Failed to fetch student profile:", err);
@@ -98,8 +87,7 @@ const StudentProfile = () => {
       setNewSkill("");
     } catch (err) {
       console.error("Failed to add skill:", err);
-      setSkills((prev) => [...prev, trimmed]);
-      setNewSkill("");
+      setStatusMessage(err.response?.data?.detail || "Could not save this skill. Please try again.");
     }
   };
 
@@ -113,7 +101,7 @@ const StudentProfile = () => {
       setSkills((prev) => prev.filter((s) => s !== skillToRemove));
     } catch (err) {
       console.error("Failed to remove skill:", err);
-      setSkills((prev) => prev.filter((s) => s !== skillToRemove));
+      setStatusMessage(err.response?.data?.detail || "Could not remove this skill. Please try again.");
     }
   };
 
@@ -139,7 +127,7 @@ const StudentProfile = () => {
       setTimeout(() => setStatusMessage(""), 3500);
     } catch (err) {
       console.error("Failed to save profile:", err);
-      alert("Could not save profile changes. Please try again.");
+      setStatusMessage(err.response?.data?.detail || err.response?.data?.error || "Could not save profile changes. Please try again.");
     } finally {
       setSaving(false);
     }

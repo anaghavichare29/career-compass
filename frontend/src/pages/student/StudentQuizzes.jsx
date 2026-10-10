@@ -68,6 +68,26 @@ const StudentQuizzes = () => {
     };
   }, []);
 
+  // Opens the quiz for a skill when arriving from the roadmap (?skill=SQL)
+  const autoOpenedRef = useRef(false);
+  useEffect(() => {
+    if (autoOpenedRef.current || quizzes.length === 0) return;
+
+    const skillParam = new URLSearchParams(window.location.search).get("skill");
+    if (!skillParam) return;
+
+    const doneIds = new Set(attempts.map((a) => a.quiz));
+    const match =
+      quizzes.find((q) => q.skill === skillParam && !doneIds.has(q.id)) ||
+      quizzes.find((q) => q.skill === skillParam);
+
+    if (match) {
+      autoOpenedRef.current = true;
+      initiateQuiz(match);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quizzes, attempts]);
+
   // Timer effect
   useEffect(() => {
     if (selectedQuiz && !quizFinished && isTimeBound) {
@@ -90,11 +110,14 @@ const StudentQuizzes = () => {
   }, [selectedQuiz, quizFinished, isTimeBound]);
 
   const completedQuizIds = new Set(attempts.map((a) => a.quiz));
-  const allCompleted = quizzes.length > 0 && quizzes.every((q) => completedQuizIds.has(q.id));
+  const allCompleted =
+    quizzes.length > 0 && quizzes.every((q) => completedQuizIds.has(q.id));
 
   const averageScore = attempts.length
     ? Math.round(
-        (attempts.reduce((sum, a) => sum + a.score / a.total_questions, 0) / attempts.length) * 100
+        (attempts.reduce((sum, a) => sum + a.score / a.total_questions, 0) /
+          attempts.length) *
+          100,
       )
     : 0;
 
@@ -159,7 +182,9 @@ const StudentQuizzes = () => {
 
   const finishQuiz = async () => {
     if (timerRef.current) clearInterval(timerRef.current);
-    const timeTaken = quizStartTime ? Math.round((Date.now() - quizStartTime) / 1000) : 0;
+    const timeTaken = quizStartTime
+      ? Math.round((Date.now() - quizStartTime) / 1000)
+      : 0;
 
     try {
       const response = await api.post(`quizzes/${selectedQuiz.id}/submit/`, {
@@ -200,7 +225,9 @@ const StudentQuizzes = () => {
       setGenerateMessage("New quiz generated!");
       loadData();
     } catch (err) {
-      const detail = err.response?.data?.detail || "Could not generate a new quiz right now.";
+      const detail =
+        err.response?.data?.detail ||
+        "Could not generate a new quiz right now.";
       setGenerateMessage(detail);
     } finally {
       setGenerating(false);
@@ -254,13 +281,17 @@ const StudentQuizzes = () => {
         questions: createQuestions,
       });
 
-      setCreateMessage("Quiz submitted successfully! An industry expert will evaluate and approve it before posting.");
+      setCreateMessage(
+        "Quiz submitted successfully! An industry expert will evaluate and approve it before posting.",
+      );
       setTimeout(() => {
         setShowCreateModal(false);
         setCreateTitle("");
         setCreateSkill("");
         setCreateDesc("");
-        setCreateQuestions([{ question: "", options: ["", "", "", ""], correct_index: 0 }]);
+        setCreateQuestions([
+          { question: "", options: ["", "", "", ""], correct_index: 0 },
+        ]);
         setCreateMessage("");
         loadData();
       }, 2500);
@@ -302,13 +333,17 @@ const StudentQuizzes = () => {
   // QUIZ RESULT SCREEN
   // ===================================================
   if (selectedQuiz && quizFinished && result) {
-    const percentage = Math.round((result.score / result.total_questions) * 100);
+    const percentage = Math.round(
+      (result.score / result.total_questions) * 100,
+    );
 
     let resultMessage = "Keep practicing and continue building your skills.";
     if (percentage >= 80) {
-      resultMessage = "Excellent work! You have a strong understanding of this topic.";
+      resultMessage =
+        "Excellent work! You have a strong understanding of this topic.";
     } else if (percentage >= 60) {
-      resultMessage = "Good progress! A little more practice can strengthen your understanding.";
+      resultMessage =
+        "Good progress! A little more practice can strengthen your understanding.";
     }
 
     return (
@@ -339,7 +374,9 @@ const StudentQuizzes = () => {
               </div>
               <div>
                 <span>Incorrect</span>
-                <strong className="incorrect">{result.total_questions - result.score}</strong>
+                <strong className="incorrect">
+                  {result.total_questions - result.score}
+                </strong>
               </div>
               <div>
                 <span>Accuracy</span>
@@ -377,9 +414,18 @@ const StudentQuizzes = () => {
         <div className="quiz-page">
           <section className="quiz-player-header">
             <div>
-              <span className="student-section-label">{selectedQuiz.skill}</span>
+              <span className="student-section-label">
+                {selectedQuiz.skill}
+              </span>
               <h1>{selectedQuiz.title}</h1>
-              <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginTop: "0.4rem" }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "1rem",
+                  marginTop: "0.4rem",
+                }}
+              >
                 <span className="quiz-question-counter">
                   Question {questionNumber} of {totalQuestions}
                 </span>
@@ -433,7 +479,9 @@ const StudentQuizzes = () => {
           </div>
 
           <section className="quiz-question-card">
-            <div className="quiz-question-number">Question {questionNumber}</div>
+            <div className="quiz-question-number">
+              Question {questionNumber}
+            </div>
             <h2>{question.question}</h2>
 
             <div className="quiz-options">
@@ -443,9 +491,13 @@ const StudentQuizzes = () => {
                   className={`quiz-option ${selectedAnswer === index ? "selected" : ""}`}
                   onClick={() => handleAnswer(index)}
                 >
-                  <span className="quiz-option-letter">{String.fromCharCode(65 + index)}</span>
+                  <span className="quiz-option-letter">
+                    {String.fromCharCode(65 + index)}
+                  </span>
                   <span>{option}</span>
-                  {selectedAnswer === index && <i className="bi bi-check-circle-fill"></i>}
+                  {selectedAnswer === index && (
+                    <i className="bi bi-check-circle-fill"></i>
+                  )}
                 </button>
               ))}
             </div>
@@ -469,7 +521,9 @@ const StudentQuizzes = () => {
                 onClick={nextQuestion}
                 disabled={selectedAnswer === null}
               >
-                {questionNumber === totalQuestions ? "Submit Quiz" : "Next Question"}
+                {questionNumber === totalQuestions
+                  ? "Submit Quiz"
+                  : "Next Question"}
                 <i className="bi bi-arrow-right"></i>
               </button>
             </div>
@@ -489,8 +543,9 @@ const StudentQuizzes = () => {
           <span className="student-section-label">KNOWLEDGE CHECK</span>
           <h1>Career Quizzes</h1>
           <p>
-            Test your knowledge with 10-question AI & domain quizzes, choose between time-bound
-            or self-paced modes, and create peer quizzes evaluated by industry experts.
+            Test your knowledge with 10-question AI & domain quizzes, choose
+            between time-bound or self-paced modes, and create peer quizzes
+            evaluated by industry experts.
           </p>
         </section>
 
@@ -596,15 +651,17 @@ const StudentQuizzes = () => {
           </div>
 
           <div className="quiz-filters">
-            {["All", "Available", "Completed", "Created by Me"].map((filter) => (
-              <button
-                key={filter}
-                className={`quiz-filter-button ${activeFilter === filter ? "active" : ""}`}
-                onClick={() => setActiveFilter(filter)}
-              >
-                {filter}
-              </button>
-            ))}
+            {["All", "Available", "Completed", "Created by Me"].map(
+              (filter) => (
+                <button
+                  key={filter}
+                  className={`quiz-filter-button ${activeFilter === filter ? "active" : ""}`}
+                  onClick={() => setActiveFilter(filter)}
+                >
+                  {filter}
+                </button>
+              ),
+            )}
           </div>
 
           <div className="quiz-grid">
@@ -626,11 +683,15 @@ const StudentQuizzes = () => {
                       <span
                         className="quiz-ai-badge"
                         style={{
-                          background: quiz.status === "approved" ? "#ecfdf5" : "#fef3c7",
-                          color: quiz.status === "approved" ? "#047857" : "#b45309",
+                          background:
+                            quiz.status === "approved" ? "#ecfdf5" : "#fef3c7",
+                          color:
+                            quiz.status === "approved" ? "#047857" : "#b45309",
                         }}
                       >
-                        {quiz.status === "approved" ? "Expert Approved" : "Pending Evaluation"}
+                        {quiz.status === "approved"
+                          ? "Expert Approved"
+                          : "Pending Evaluation"}
                       </span>
                     )}
                   </div>
@@ -674,7 +735,9 @@ const StudentQuizzes = () => {
             })}
 
             {filteredQuizzes.length === 0 && (
-              <p style={{ color: "#64748b", padding: "1.5rem" }}>No quizzes match this filter yet.</p>
+              <p style={{ color: "#64748b", padding: "1.5rem" }}>
+                No quizzes match this filter yet.
+              </p>
             )}
           </div>
         </section>
@@ -728,17 +791,33 @@ const StudentQuizzes = () => {
               <h2 style={{ fontSize: "1.3rem", marginBottom: "0.4rem" }}>
                 Start {quizToStart.title}
               </h2>
-              <p style={{ color: "#64748b", fontSize: "0.9rem", marginBottom: "1.5rem" }}>
+              <p
+                style={{
+                  color: "#64748b",
+                  fontSize: "0.9rem",
+                  marginBottom: "1.5rem",
+                }}
+              >
                 Choose your preferred test mode before answering:
               </p>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1.5rem" }}>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.75rem",
+                  marginBottom: "1.5rem",
+                }}
+              >
                 <button
                   className="student-primary-btn"
                   onClick={() => startQuiz(quizToStart, true)}
                   style={{ justifyContent: "center", padding: "0.8rem 1rem" }}
                 >
-                  <i className="bi bi-alarm" style={{ marginRight: "0.4rem" }}></i>
+                  <i
+                    className="bi bi-alarm"
+                    style={{ marginRight: "0.4rem" }}
+                  ></i>
                   Time-Bound Mode (15-min countdown)
                 </button>
 
@@ -747,14 +826,23 @@ const StudentQuizzes = () => {
                   onClick={() => startQuiz(quizToStart, false)}
                   style={{ justifyContent: "center", padding: "0.8rem 1rem" }}
                 >
-                  <i className="bi bi-hourglass" style={{ marginRight: "0.4rem" }}></i>
+                  <i
+                    className="bi bi-hourglass"
+                    style={{ marginRight: "0.4rem" }}
+                  ></i>
                   Self-Paced Mode (Take your time)
                 </button>
               </div>
 
               <button
                 onClick={() => setQuizToStart(null)}
-                style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: "0.85rem" }}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#64748b",
+                  cursor: "pointer",
+                  fontSize: "0.85rem",
+                }}
               >
                 Cancel
               </button>
@@ -813,9 +901,16 @@ const StudentQuizzes = () => {
               <h2 style={{ margin: "0.3rem 0 0.5rem", fontSize: "1.3rem" }}>
                 Create a Peer Quiz
               </h2>
-              <p style={{ color: "#64748b", fontSize: "0.85rem", marginBottom: "1.25rem" }}>
-                Write your questions. An industry expert will evaluate their relevance and validity
-                before the quiz is published to other students.
+              <p
+                style={{
+                  color: "#64748b",
+                  fontSize: "0.85rem",
+                  marginBottom: "1.25rem",
+                }}
+              >
+                Write your questions. An industry expert will evaluate their
+                relevance and validity before the quiz is published to other
+                students.
               </p>
 
               {createMessage && (
@@ -823,8 +918,12 @@ const StudentQuizzes = () => {
                   style={{
                     padding: "0.75rem 1rem",
                     borderRadius: "8px",
-                    background: createMessage.includes("successfully") ? "#ecfdf5" : "#fee2e2",
-                    color: createMessage.includes("successfully") ? "#047857" : "#b91c1c",
+                    background: createMessage.includes("successfully")
+                      ? "#ecfdf5"
+                      : "#fee2e2",
+                    color: createMessage.includes("successfully")
+                      ? "#047857"
+                      : "#b91c1c",
                     marginBottom: "1rem",
                     fontSize: "0.85rem",
                   }}
@@ -834,9 +933,24 @@ const StudentQuizzes = () => {
               )}
 
               <form onSubmit={handleCreateQuizSubmit}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "1rem",
+                    marginBottom: "1rem",
+                  }}
+                >
                   <div>
-                    <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, color: "#334155", marginBottom: "0.3rem" }}>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: "0.85rem",
+                        fontWeight: 600,
+                        color: "#334155",
+                        marginBottom: "0.3rem",
+                      }}
+                    >
                       Quiz Title
                     </label>
                     <input
@@ -845,12 +959,25 @@ const StudentQuizzes = () => {
                       value={createTitle}
                       onChange={(e) => setCreateTitle(e.target.value)}
                       required
-                      style={{ width: "100%", padding: "0.6rem 0.8rem", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                      style={{
+                        width: "100%",
+                        padding: "0.6rem 0.8rem",
+                        borderRadius: "8px",
+                        border: "1px solid #cbd5e1",
+                      }}
                     />
                   </div>
 
                   <div>
-                    <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, color: "#334155", marginBottom: "0.3rem" }}>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: "0.85rem",
+                        fontWeight: 600,
+                        color: "#334155",
+                        marginBottom: "0.3rem",
+                      }}
+                    >
                       Domain / Skill
                     </label>
                     <input
@@ -859,20 +986,45 @@ const StudentQuizzes = () => {
                       value={createSkill}
                       onChange={(e) => setCreateSkill(e.target.value)}
                       required
-                      style={{ width: "100%", padding: "0.6rem 0.8rem", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                      style={{
+                        width: "100%",
+                        padding: "0.6rem 0.8rem",
+                        borderRadius: "8px",
+                        border: "1px solid #cbd5e1",
+                      }}
                     />
                   </div>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "1rem",
+                    marginBottom: "1rem",
+                  }}
+                >
                   <div>
-                    <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, color: "#334155", marginBottom: "0.3rem" }}>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: "0.85rem",
+                        fontWeight: 600,
+                        color: "#334155",
+                        marginBottom: "0.3rem",
+                      }}
+                    >
                       Difficulty Level
                     </label>
                     <select
                       value={createDifficulty}
                       onChange={(e) => setCreateDifficulty(e.target.value)}
-                      style={{ width: "100%", padding: "0.6rem 0.8rem", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                      style={{
+                        width: "100%",
+                        padding: "0.6rem 0.8rem",
+                        borderRadius: "8px",
+                        border: "1px solid #cbd5e1",
+                      }}
                     >
                       <option>Beginner</option>
                       <option>Intermediate</option>
@@ -881,7 +1033,15 @@ const StudentQuizzes = () => {
                   </div>
 
                   <div>
-                    <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, color: "#334155", marginBottom: "0.3rem" }}>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: "0.85rem",
+                        fontWeight: 600,
+                        color: "#334155",
+                        marginBottom: "0.3rem",
+                      }}
+                    >
                       Short Description
                     </label>
                     <input
@@ -889,12 +1049,23 @@ const StudentQuizzes = () => {
                       placeholder="Brief overview of quiz content"
                       value={createDesc}
                       onChange={(e) => setCreateDesc(e.target.value)}
-                      style={{ width: "100%", padding: "0.6rem 0.8rem", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                      style={{
+                        width: "100%",
+                        padding: "0.6rem 0.8rem",
+                        borderRadius: "8px",
+                        border: "1px solid #cbd5e1",
+                      }}
                     />
                   </div>
                 </div>
 
-                <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: "1rem", marginBottom: "1rem" }}>
+                <div
+                  style={{
+                    borderTop: "1px solid #e2e8f0",
+                    paddingTop: "1rem",
+                    marginBottom: "1rem",
+                  }}
+                >
                   <h4 style={{ margin: "0 0 0.75rem", fontSize: "0.95rem" }}>
                     Questions ({createQuestions.length})
                   </h4>
@@ -910,39 +1081,96 @@ const StudentQuizzes = () => {
                         marginBottom: "1rem",
                       }}
                     >
-                      <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, color: "#334155", marginBottom: "0.3rem" }}>
+                      <label
+                        style={{
+                          display: "block",
+                          fontSize: "0.85rem",
+                          fontWeight: 600,
+                          color: "#334155",
+                          marginBottom: "0.3rem",
+                        }}
+                      >
                         Question {qIndex + 1}
                       </label>
                       <input
                         type="text"
                         placeholder="Type question here..."
                         value={q.question}
-                        onChange={(e) => handleQuestionChange(qIndex, "question", e.target.value)}
+                        onChange={(e) =>
+                          handleQuestionChange(
+                            qIndex,
+                            "question",
+                            e.target.value,
+                          )
+                        }
                         required
-                        style={{ width: "100%", padding: "0.55rem 0.75rem", borderRadius: "6px", border: "1px solid #cbd5e1", marginBottom: "0.75rem" }}
+                        style={{
+                          width: "100%",
+                          padding: "0.55rem 0.75rem",
+                          borderRadius: "6px",
+                          border: "1px solid #cbd5e1",
+                          marginBottom: "0.75rem",
+                        }}
                       />
 
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "1fr 1fr",
+                          gap: "0.5rem",
+                        }}
+                      >
                         {q.options.map((opt, oIndex) => (
-                          <div key={oIndex} style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                          <div
+                            key={oIndex}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "0.4rem",
+                            }}
+                          >
                             <input
                               type="radio"
                               name={`correct-${qIndex}`}
                               checked={q.correct_index === oIndex}
-                              onChange={() => handleQuestionChange(qIndex, "correct_index", oIndex)}
+                              onChange={() =>
+                                handleQuestionChange(
+                                  qIndex,
+                                  "correct_index",
+                                  oIndex,
+                                )
+                              }
                             />
                             <input
                               type="text"
                               placeholder={`Option ${String.fromCharCode(65 + oIndex)}`}
                               value={opt}
-                              onChange={(e) => handleOptionChange(qIndex, oIndex, e.target.value)}
+                              onChange={(e) =>
+                                handleOptionChange(
+                                  qIndex,
+                                  oIndex,
+                                  e.target.value,
+                                )
+                              }
                               required
-                              style={{ width: "100%", padding: "0.45rem 0.6rem", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
+                              style={{
+                                width: "100%",
+                                padding: "0.45rem 0.6rem",
+                                borderRadius: "6px",
+                                border: "1px solid #cbd5e1",
+                                fontSize: "0.85rem",
+                              }}
                             />
                           </div>
                         ))}
                       </div>
-                      <small style={{ color: "#64748b", display: "block", marginTop: "0.4rem" }}>
+                      <small
+                        style={{
+                          color: "#64748b",
+                          display: "block",
+                          marginTop: "0.4rem",
+                        }}
+                      >
                         Select the radio button next to the correct answer.
                       </small>
                     </div>
@@ -959,7 +1187,15 @@ const StudentQuizzes = () => {
                   </button>
                 </div>
 
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem", borderTop: "1px solid #e2e8f0", paddingTop: "1rem" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    gap: "0.75rem",
+                    borderTop: "1px solid #e2e8f0",
+                    paddingTop: "1rem",
+                  }}
+                >
                   <button
                     type="button"
                     onClick={() => setShowCreateModal(false)}
@@ -973,7 +1209,9 @@ const StudentQuizzes = () => {
                     disabled={createSubmitting}
                   >
                     <i className="bi bi-send"></i>
-                    {createSubmitting ? "Submitting..." : "Submit for Expert Evaluation"}
+                    {createSubmitting
+                      ? "Submitting..."
+                      : "Submit for Expert Evaluation"}
                   </button>
                 </div>
               </form>

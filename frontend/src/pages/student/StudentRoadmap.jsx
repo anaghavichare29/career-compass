@@ -33,6 +33,7 @@ const StudentRoadmap = () => {
   const [topCareerName, setTopCareerName] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [selectedSkill, setSelectedSkill] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -87,8 +88,8 @@ const StudentRoadmap = () => {
             <span className="student-section-label">YOUR CAREER PATH</span>
             <h1>Career Roadmap</h1>
             <p>
-              You don't have a roadmap yet. Complete the career assessment
-              first so we can generate one for you.
+              You don't have a roadmap yet. Complete the career assessment first
+              so we can generate one for you.
             </p>
           </section>
           <button
@@ -108,7 +109,9 @@ const StudentRoadmap = () => {
 
   const allSkills = stages.flatMap((s) => s.skills);
   const overallProgress = allSkills.length
-    ? Math.round(allSkills.reduce((sum, sk) => sum + sk.progress, 0) / allSkills.length)
+    ? Math.round(
+        allSkills.reduce((sum, sk) => sum + sk.progress, 0) / allSkills.length,
+      )
     : 0;
 
   // Find the first "current" skill across all stages for the Next Best Step card
@@ -124,7 +127,6 @@ const StudentRoadmap = () => {
   return (
     <StudentLayout pageTitle="Career Roadmap">
       <div className="roadmap-page">
-
         <section className="roadmap-introduction">
           <span className="student-section-label">YOUR CAREER PATH</span>
           <h1>Career Roadmap</h1>
@@ -143,8 +145,8 @@ const StudentRoadmap = () => {
               <span className="roadmap-small-label">TARGET CAREER</span>
               <h2>{topCareerName || "Your Career Path"}</h2>
               <p>
-                Your roadmap combines your career recommendation, skill gaps
-                and learning progress into a structured career path.
+                Your roadmap combines your career recommendation, skill gaps and
+                learning progress into a structured career path.
               </p>
             </div>
           </div>
@@ -156,7 +158,9 @@ const StudentRoadmap = () => {
             </div>
             <div>
               <span className="roadmap-small-label">ROADMAP PROGRESS</span>
-              <h3>{completedStages} of {totalStages} stages</h3>
+              <h3>
+                {completedStages} of {totalStages} stages
+              </h3>
               <div className="roadmap-main-progress">
                 <div style={{ width: `${overallProgress}%` }}></div>
               </div>
@@ -259,7 +263,7 @@ const StudentRoadmap = () => {
                 const stageAvg = stage.skills.length
                   ? Math.round(
                       stage.skills.reduce((sum, sk) => sum + sk.progress, 0) /
-                        stage.skills.length
+                        stage.skills.length,
                     )
                   : 0;
                 return (
@@ -288,7 +292,10 @@ const StudentRoadmap = () => {
 
         <section className="roadmap-timeline">
           {stages.map((stage, index) => (
-            <div className={`roadmap-stage-card ${stage.status}`} key={stage.id}>
+            <div
+              className={`roadmap-stage-card ${stage.status}`}
+              key={stage.id}
+            >
               <div className="roadmap-timeline-column">
                 <div className="roadmap-stage-number">
                   {stage.status === "completed" ? (
@@ -311,8 +318,8 @@ const StudentRoadmap = () => {
                         {stage.status === "completed"
                           ? "Completed"
                           : stage.status === "current"
-                          ? "Currently Learning"
-                          : "Upcoming"}
+                            ? "Currently Learning"
+                            : "Upcoming"}
                       </span>
                     </div>
                     <span className="roadmap-duration">
@@ -327,8 +334,14 @@ const StudentRoadmap = () => {
                 <div className="roadmap-skills-grid">
                   {stage.skills.map((skill) => (
                     <div
-                      className={`roadmap-skill-card ${skill.status}`}
+                      className={`roadmap-skill-card ${skill.status} clickable`}
                       key={skill.id}
+                      onClick={() => setSelectedSkill(skill)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) =>
+                        e.key === "Enter" && setSelectedSkill(skill)
+                      }
                     >
                       <div className="roadmap-skill-top">
                         <div className="roadmap-skill-icon">
@@ -353,9 +366,12 @@ const StudentRoadmap = () => {
                         {skill.status === "completed"
                           ? "Completed"
                           : skill.status === "current"
-                          ? "In progress"
-                          : "Upcoming"}
+                            ? "In progress"
+                            : "Upcoming"}
                       </small>
+                      <span className="roadmap-skill-hint">
+                        View details <i className="bi bi-arrow-right"></i>
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -396,12 +412,14 @@ const StudentRoadmap = () => {
             <p>{aiLearningInsight.description}</p>
 
             <div className="learning-recommendations">
-              {aiLearningInsight.recommendations.map((recommendation, index) => (
-                <div className="learning-recommendation" key={recommendation}>
-                  <span>{index + 1}</span>
-                  <p>{recommendation}</p>
-                </div>
-              ))}
+              {aiLearningInsight.recommendations.map(
+                (recommendation, index) => (
+                  <div className="learning-recommendation" key={recommendation}>
+                    <span>{index + 1}</span>
+                    <p>{recommendation}</p>
+                  </div>
+                ),
+              )}
             </div>
           </div>
 
@@ -437,8 +455,8 @@ const StudentRoadmap = () => {
             <span className="student-section-label">KEEP GOING</span>
             <h2>Turn your roadmap into action</h2>
             <p>
-              Complete your assigned learning tasks and keep progressing
-              through your career roadmap.
+              Complete your assigned learning tasks and keep progressing through
+              your career roadmap.
             </p>
           </div>
           <button
@@ -449,8 +467,116 @@ const StudentRoadmap = () => {
             <i className="bi bi-arrow-right"></i>
           </button>
         </section>
-
       </div>
+      {selectedSkill && (
+        <div
+          className="skill-modal-overlay"
+          onClick={() => setSelectedSkill(null)}
+        >
+          <div className="skill-modal" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="skill-modal-close"
+              onClick={() => setSelectedSkill(null)}
+              aria-label="Close"
+            >
+              <i className="bi bi-x-lg"></i>
+            </button>
+
+            <div className="skill-modal-header">
+              <h2>{selectedSkill.name}</h2>
+              <span className={`skill-modal-status ${selectedSkill.status}`}>
+                {selectedSkill.status === "completed"
+                  ? "Completed"
+                  : selectedSkill.status === "current"
+                    ? "In progress"
+                    : "Upcoming"}
+              </span>
+            </div>
+
+            <div className="skill-modal-progress">
+              <div className="skill-modal-progress-label">
+                <span>Completion</span>
+                <strong>{selectedSkill.progress}%</strong>
+              </div>
+              <div className="skill-modal-progress-track">
+                <div style={{ width: `${selectedSkill.progress}%` }}></div>
+              </div>
+            </div>
+
+            <section className="skill-modal-section">
+              <h3>
+                <i className="bi bi-book"></i> What to learn
+              </h3>
+              <p>
+                {selectedSkill.what_to_learn ||
+                  "Details will appear here soon."}
+              </p>
+            </section>
+
+            <section className="skill-modal-section">
+              <h3>
+                <i className="bi bi-lightbulb"></i> Why it matters
+              </h3>
+              <p>
+                {selectedSkill.why_it_matters ||
+                  "Details will appear here soon."}
+              </p>
+            </section>
+
+            <section className="skill-modal-section">
+              <h3>
+                <i className="bi bi-link-45deg"></i> Recommended resources
+              </h3>
+              <ul className="skill-resource-list">
+                {(selectedSkill.resources || []).map((resource) => (
+                  <li key={resource.url}>
+                    <a
+                      href={resource.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {resource.title}
+                      <i className="bi bi-box-arrow-up-right"></i>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </section>
+
+            <section className="skill-modal-section">
+              <h3>
+                <i className="bi bi-patch-question"></i> Mini quiz
+              </h3>
+              {selectedSkill.mini_quiz ? (
+                <div className="skill-quiz-row">
+                  <span>
+                    {selectedSkill.mini_quiz.title}
+                    {selectedSkill.mini_quiz.completed && (
+                      <em className="skill-quiz-done"> · Completed</em>
+                    )}
+                  </span>
+                  <button
+                    className="student-primary-btn"
+                    onClick={() =>
+                      (window.location.href = `/student/quizzes?skill=${encodeURIComponent(selectedSkill.name)}`)
+                    }
+                  >
+                    {selectedSkill.mini_quiz.completed
+                      ? "Retake Quiz"
+                      : "Take Quiz"}
+                    <i className="bi bi-arrow-right"></i>
+                  </button>
+                </div>
+              ) : (
+                <p>
+                  No quiz is available for this skill yet. Check the Quizzes
+                  page later.
+                </p>
+              )}
+            </section>
+          </div>
+        </div>
+      )}
     </StudentLayout>
   );
 };

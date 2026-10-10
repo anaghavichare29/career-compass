@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import api from "../../services/api";
+import MentorLayout from "../../components/mentor/MentorLayout";
 import "./expert-profile.css";
 
 const expertsData = [
@@ -359,56 +360,8 @@ const ExpertProfile = () => {
 
 
   return (
-    <div className="expert-profile-page">
-
-
-      {/* =================================================
-          HEADER
-      ================================================= */}
-
-      <header className="experts-header">
-
-        <div className="experts-brand">
-
-          <h1>
-            CareerCompass
-          </h1>
-
-        </div>
-
-
-        <div className="experts-header-actions">
-
-          <button
-            className="notification-button"
-            type="button"
-          >
-            🔔
-          </button>
-
-
-          <div className="profile-mini">
-
-            <div className="profile-avatar">
-              A
-            </div>
-
-            <span>
-              Student
-            </span>
-
-          </div>
-
-        </div>
-
-      </header>
-
-
-      {/* =================================================
-          MAIN CONTENT
-      ================================================= */}
-
-      <main className="expert-profile-content">
+    <MentorLayout activePage="directory" pageTitle="Industry Mentor Profile">
+      <div className="expert-profile-content" style={{ padding: "32px 40px 60px", maxWidth: "1200px", margin: "0 auto" }}>
 
 
         {/* BACK */}
@@ -912,9 +865,8 @@ const ExpertProfile = () => {
 
         </section>
 
-      </main>
-
-    </div>
+      </div>
+    </MentorLayout>
   );
 };
 

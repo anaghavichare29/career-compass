@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import api from "../../services/api";
+import AdminLayout from "../../components/admin/AdminLayout";
 import "./AdminExperts.css";
 
 const AdminExperts = () => {
@@ -57,20 +58,28 @@ const AdminExperts = () => {
     });
   }, [experts, searchTerm, statusFilter, domainFilter]);
 
-  const approvedCount = experts.filter((expert) => expert.status === "Approved").length;
-  const pendingCount = experts.filter((expert) => expert.status === "Pending").length;
-  const rejectedCount = experts.filter((expert) => expert.status === "Rejected").length;
+  const approvedCount = experts.filter(
+    (expert) => expert.status === "Approved",
+  ).length;
+  const pendingCount = experts.filter(
+    (expert) => expert.status === "Pending",
+  ).length;
+  const rejectedCount = experts.filter(
+    (expert) => expert.status === "Rejected",
+  ).length;
   const verifiedCount = experts.filter((expert) => expert.verified).length;
 
   const updateExpertStatus = async (expertId, newStatus) => {
     try {
-      await api.post(`admin-portal/experts/${expertId}/verify/`, { decision: newStatus });
+      await api.post(`admin-portal/experts/${expertId}/verify/`, {
+        decision: newStatus,
+      });
       setExperts((current) =>
         current.map((e) =>
           e.id === expertId
             ? { ...e, status: newStatus, verified: newStatus === "Approved" }
-            : e
-        )
+            : e,
+        ),
       );
       if (selectedExpert && selectedExpert.id === expertId) {
         setSelectedExpert((prev) => ({
@@ -90,12 +99,35 @@ const AdminExperts = () => {
     if (!userId) return;
     try {
       const res = await api.post(`admin-portal/users/${userId}/toggle-status/`);
-      setExperts((current) =>
-        current.map((e) => (e.userId === userId ? { ...e, accountStatus: res.data.status } : e))
+      const rawStatus = res.data?.status ?? res.data?.account_status;
+      const isActive =
+        typeof res.data?.is_active === "boolean" ? res.data.is_active : null;
+      const current = experts.find(
+        (e) => String(e.userId ?? e.user_id) === String(userId),
       );
-      if (selectedExpert && selectedExpert.userId === userId) {
-        setSelectedExpert((prev) => ({ ...prev, accountStatus: res.data.status }));
-      }
+      const nextStatus = rawStatus
+        ? String(rawStatus).toLowerCase() === "active"
+          ? "Active"
+          : "Inactive"
+        : isActive !== null
+          ? isActive
+            ? "Active"
+            : "Inactive"
+          : (current?.accountStatus || "Active") === "Active"
+            ? "Inactive"
+            : "Active";
+      setExperts((items) =>
+        items.map((e) =>
+          String(e.userId ?? e.user_id) === String(userId)
+            ? { ...e, accountStatus: nextStatus }
+            : e,
+        ),
+      );
+      setSelectedExpert((prev) =>
+        prev && String(prev.userId ?? prev.user_id) === String(userId)
+          ? { ...prev, accountStatus: nextStatus }
+          : prev,
+      );
     } catch (err) {
       console.error("Failed to toggle mentor account:", err);
       alert("Failed to update account status.");
@@ -107,69 +139,36 @@ const AdminExperts = () => {
   };
 
   return (
-    <div className="admin-experts-page">
-      {/* HEADER */}
-      <header className="admin-header">
-        <div className="admin-brand">
-          <h1 onClick={() => (window.location.href = "/admin/dashboard")} style={{ cursor: "pointer" }}>
-            CareerCompass <span style={{ fontSize: "14px", fontWeight: "600", color: "#2f5bea", background: "#eff6ff", padding: "3px 8px", borderRadius: "6px" }}>ADMIN</span>
-          </h1>
-        </div>
-
-        <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
-          <button onClick={() => (window.location.href = "/admin/dashboard")} style={{ background: "none", border: "none", fontWeight: "600", color: "#64748b", cursor: "pointer", fontSize: "14px" }}>
-            Dashboard
-          </button>
-          <button onClick={() => (window.location.href = "/admin/students")} style={{ background: "none", border: "none", fontWeight: "600", color: "#64748b", cursor: "pointer", fontSize: "14px" }}>
-            Students
-          </button>
-          <button onClick={() => (window.location.href = "/admin/experts")} style={{ background: "none", border: "none", fontWeight: "700", color: "#2f5bea", cursor: "pointer", fontSize: "14px" }}>
-            Experts
-          </button>
-          <button onClick={() => (window.location.href = "/admin/careers")} style={{ background: "none", border: "none", fontWeight: "600", color: "#64748b", cursor: "pointer", fontSize: "14px" }}>
-            Careers & Skills
-          </button>
-          <button onClick={() => (window.location.href = "/admin/quizzes")} style={{ background: "none", border: "none", fontWeight: "600", color: "#64748b", cursor: "pointer", fontSize: "14px" }}>
-            Quizzes & Tests
-          </button>
-          <button onClick={() => (window.location.href = "/admin/announcements")} style={{ background: "none", border: "none", fontWeight: "600", color: "#64748b", cursor: "pointer", fontSize: "14px" }}>
-            Announcements & Moderation
-          </button>
-          <button onClick={() => (window.location.href = "/admin/reports")} style={{ background: "none", border: "none", fontWeight: "600", color: "#64748b", cursor: "pointer", fontSize: "14px" }}>
-            Reports & Analytics
-          </button>
-        </div>
-
-        <div className="admin-header-right">
-          <div className="admin-profile">
-            <div className="admin-avatar">A</div>
-            <div className="admin-profile-info">
-              <strong>Admin</strong>
-              <small>Administrator</small>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* CONTENT */}
+    <AdminLayout activePage="experts" pageTitle="Experts">
       <main className="admin-experts-content">
-        <button className="admin-back-button" type="button" onClick={() => (window.location.href = "/admin/dashboard")}>
+        <button
+          className="admin-back-button"
+          type="button"
+          onClick={() => (window.location.href = "/admin/dashboard")}
+        >
           <i className="bi bi-arrow-left"></i> Back to Dashboard
         </button>
 
         {/* PAGE HEADING */}
         <section className="admin-page-heading">
           <div>
-            <span className="admin-section-label">INDUSTRY EXPERT MANAGEMENT</span>
+            <span className="admin-section-label">
+              INDUSTRY EXPERT MANAGEMENT
+            </span>
             <h2>Manage Industry Mentors</h2>
-            <p>Verify professional accounts, review credentials, approve mentorship requests, and manage mentor status.</p>
+            <p>
+              Verify professional accounts, review credentials, approve
+              mentorship requests, and manage mentor status.
+            </p>
           </div>
         </section>
 
         {/* STATISTICS */}
         <section className="expert-admin-stats">
           <div className="expert-admin-stat">
-            <div className="expert-admin-stat-icon purple"><i className="bi bi-person-badge"></i></div>
+            <div className="expert-admin-stat-icon purple">
+              <i className="bi bi-person-badge"></i>
+            </div>
             <div>
               <span>Total Mentors</span>
               <h3>{experts.length}</h3>
@@ -178,7 +177,9 @@ const AdminExperts = () => {
           </div>
 
           <div className="expert-admin-stat">
-            <div className="expert-admin-stat-icon green"><i className="bi bi-check-circle"></i></div>
+            <div className="expert-admin-stat-icon green">
+              <i className="bi bi-check-circle"></i>
+            </div>
             <div>
               <span>Verified & Approved</span>
               <h3>{approvedCount}</h3>
@@ -187,7 +188,9 @@ const AdminExperts = () => {
           </div>
 
           <div className="expert-admin-stat">
-            <div className="expert-admin-stat-icon orange"><i className="bi bi-clock-history"></i></div>
+            <div className="expert-admin-stat-icon orange">
+              <i className="bi bi-clock-history"></i>
+            </div>
             <div>
               <span>Pending Verification</span>
               <h3>{pendingCount}</h3>
@@ -196,7 +199,9 @@ const AdminExperts = () => {
           </div>
 
           <div className="expert-admin-stat">
-            <div className="expert-admin-stat-icon red"><i className="bi bi-x-circle"></i></div>
+            <div className="expert-admin-stat-icon red">
+              <i className="bi bi-x-circle"></i>
+            </div>
             <div>
               <span>Rejected / Need Edit</span>
               <h3>{rejectedCount}</h3>
@@ -218,14 +223,20 @@ const AdminExperts = () => {
           </div>
 
           <div className="admin-filter-group">
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
               <option>All Status</option>
               <option>Approved</option>
               <option>Pending</option>
               <option>Rejected</option>
             </select>
 
-            <select value={domainFilter} onChange={(e) => setDomainFilter(e.target.value)}>
+            <select
+              value={domainFilter}
+              onChange={(e) => setDomainFilter(e.target.value)}
+            >
               {domains.map((d) => (
                 <option key={d}>{d}</option>
               ))}
@@ -240,12 +251,19 @@ const AdminExperts = () => {
           </div>
 
           {loading ? (
-            <div style={{ textAlign: "center", padding: "40px", color: "#64748b" }}>
-              <i className="bi bi-arrow-repeat" style={{ fontSize: "24px" }}></i>
+            <div
+              style={{ textAlign: "center", padding: "40px", color: "#64748b" }}
+            >
+              <i
+                className="bi bi-arrow-repeat"
+                style={{ fontSize: "24px" }}
+              ></i>
               <p>Loading mentors...</p>
             </div>
           ) : filteredExperts.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "40px", color: "#64748b" }}>
+            <div
+              style={{ textAlign: "center", padding: "40px", color: "#64748b" }}
+            >
               <p>No mentors found matching your filters.</p>
             </div>
           ) : (
@@ -268,45 +286,83 @@ const AdminExperts = () => {
                     <tr key={exp.id}>
                       <td>
                         <div className="admin-user-cell">
-                          <div className="admin-table-avatar">{exp.initials || exp.name.charAt(0)}</div>
+                          <div className="admin-table-avatar">
+                            {exp.initials || exp.name.charAt(0)}
+                          </div>
                           <div>
                             <strong>{exp.name}</strong>
-                            <small>{exp.email}</small>
                           </div>
+                          <small>{exp.email}</small>
                         </div>
                       </td>
                       <td>
                         <strong>{exp.role}</strong>
-                        <div style={{ fontSize: "12px", color: "#64748b" }}>{exp.company}</div>
+                        <div style={{ fontSize: "12px", color: "#64748b" }}>
+                          {exp.company}
+                        </div>
                       </td>
-                      <td><span style={{ fontWeight: "600", color: "#2f5bea" }}>{exp.domain}</span></td>
+                      <td>
+                        <span style={{ fontWeight: "600", color: "#2f5bea" }}>
+                          {exp.domain}
+                        </span>
+                      </td>
                       <td>{exp.experience}</td>
                       <td>
-                        <span className={`admin-status-pill ${exp.status === "Approved" ? "approved" : exp.status === "Rejected" ? "rejected" : "pending"}`}>
+                        <span
+                          className={`admin-status-pill ${exp.status === "Approved" ? "approved" : exp.status === "Rejected" ? "rejected" : "pending"}`}
+                        >
                           {exp.status}
                         </span>
                       </td>
                       <td>
-                        <span className={`admin-status-pill ${exp.accountStatus === "Active" ? "active" : "inactive"}`}>
+                        <span
+                          className={`admin-status-pill ${exp.accountStatus === "Active" ? "active" : "inactive"}`}
+                        >
                           {exp.accountStatus || "Active"}
                         </span>
                       </td>
-                      <td style={{ fontSize: "12px", color: "#64748b" }}>{exp.joined}</td>
+                      <td style={{ fontSize: "12px", color: "#64748b" }}>
+                        {exp.joined}
+                      </td>
                       <td>
                         <div className="table-actions">
-                          <button className="table-icon-btn view" title="View Details" onClick={() => handleViewExpert(exp)}>
-                            <i className="bi bi-eye"></i>
-                          </button>
-                          {exp.status !== "Approved" && (
-                            <button className="table-icon-btn approve" title="Approve Mentor" onClick={() => updateExpertStatus(exp.id, "Approved")}>
-                              <i className="bi bi-check-lg"></i>
+                          <div className="action-grid">
+                            <button
+                              className="table-action-button view"
+                              onClick={() => handleViewExpert(exp)}
+                            >
+                              <i className="bi bi-eye" aria-hidden="true"></i>
+                              <span>View Details</span>
                             </button>
-                          )}
-                          {exp.status !== "Rejected" && (
-                            <button className="table-icon-btn reject" title="Reject Mentor" onClick={() => updateExpertStatus(exp.id, "Rejected")}>
-                              <i className="bi bi-x-lg"></i>
-                            </button>
-                          )}
+                            {exp.status !== "Approved" && (
+                              <button
+                                className="table-action-button approve"
+                                onClick={() =>
+                                  updateExpertStatus(exp.id, "Approved")
+                                }
+                              >
+                                <i
+                                  className="bi bi-check-lg"
+                                  aria-hidden="true"
+                                ></i>
+                                <span>Approve</span>
+                              </button>
+                            )}
+                            {exp.status !== "Rejected" && (
+                              <button
+                                className="table-action-button reject"
+                                onClick={() =>
+                                  updateExpertStatus(exp.id, "Rejected")
+                                }
+                              >
+                                <i
+                                  className="bi bi-x-lg"
+                                  aria-hidden="true"
+                                ></i>
+                                <span>Reject</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </td>
                     </tr>
@@ -320,17 +376,36 @@ const AdminExperts = () => {
 
       {/* DETAIL MODAL */}
       {selectedExpert && (
-        <div className="expert-modal-overlay">
-          <div className="expert-modal">
+        <div
+          className="expert-modal-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setSelectedExpert(null);
+          }}
+        >
+          <div
+            className="expert-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="expert-detail-title"
+          >
             <div className="expert-modal-header">
               <div className="modal-profile">
-                <div className="modal-avatar">{selectedExpert.initials || selectedExpert.name.charAt(0)}</div>
+                <div className="modal-avatar">
+                  {selectedExpert.initials || selectedExpert.name.charAt(0)}
+                </div>
                 <div>
-                  <h3>{selectedExpert.name}</h3>
-                  <span>{selectedExpert.email} • ID #{selectedExpert.id}</span>
+                  <h3 id="expert-detail-title">{selectedExpert.name}</h3>
+                  <span>
+                    {selectedExpert.email} • ID #{selectedExpert.id}
+                  </span>
                 </div>
               </div>
-              <button className="modal-close" onClick={() => setSelectedExpert(null)}>✕</button>
+              <button
+                className="modal-close"
+                onClick={() => setSelectedExpert(null)}
+              >
+                ✕
+              </button>
             </div>
 
             <div className="expert-modal-grid">
@@ -361,28 +436,43 @@ const AdminExperts = () => {
             </div>
 
             <div className="expert-modal-actions" style={{ marginTop: "24px" }}>
-              <button className="expert-modal-secondary" type="button" onClick={() => setSelectedExpert(null)}>
+              <button
+                className="expert-modal-secondary"
+                type="button"
+                onClick={() => setSelectedExpert(null)}
+              >
                 Close
               </button>
               <button
                 className="expert-modal-danger"
                 type="button"
-                onClick={() => updateExpertStatus(selectedExpert.id, selectedExpert.status === "Approved" ? "Rejected" : "Approved")}
+                onClick={() =>
+                  updateExpertStatus(
+                    selectedExpert.id,
+                    selectedExpert.status === "Approved"
+                      ? "Rejected"
+                      : "Approved",
+                  )
+                }
               >
-                {selectedExpert.status === "Approved" ? "Revoke / Reject" : "Approve & Verify"}
+                {selectedExpert.status === "Approved"
+                  ? "Revoke / Reject"
+                  : "Approve & Verify"}
               </button>
               <button
                 className="expert-modal-primary"
                 type="button"
                 onClick={() => handleToggleAccountStatus(selectedExpert.userId)}
               >
-                {selectedExpert.accountStatus === "Active" ? "Deactivate Account" : "Activate Account"}
+                {selectedExpert.accountStatus === "Active"
+                  ? "Deactivate Account"
+                  : "Activate Account"}
               </button>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </AdminLayout>
   );
 };
 

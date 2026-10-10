@@ -41,15 +41,12 @@ def _generate_default_tasks_for_user(user_id):
 
 def _recalculate_user_progress(user_id):
     tasks = Task.objects.filter(user_id=user_id)
-    if not tasks.exists():
-        return
-
     completed_count = tasks.filter(status='Completed').count()
-    skill_percent = round((completed_count / tasks.count()) * 100)
+    skill_percent = round((completed_count / tasks.count()) * 100) if tasks.exists() else 0
 
     summary, _ = ProgressSummary.objects.get_or_create(user_id=user_id)
     summary.skill_progress_percent = skill_percent
-    summary.save()
+    summary.save(update_fields=['skill_progress_percent'])
 
 
 class TaskListView(ListAPIView):

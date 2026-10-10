@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import api from "../../services/api";
+import AdminLayout from "../../components/admin/AdminLayout";
 import "./AdminStudents.css";
 
 const AdminReports = () => {
@@ -15,39 +16,7 @@ const AdminReports = () => {
   }, []);
 
   return (
-    <div className="admin-students-page">
-      <header className="admin-header">
-        <div className="admin-brand">
-          <h1 onClick={() => (window.location.href = "/admin/dashboard")} style={{ cursor: "pointer" }}>
-            CareerCompass <span style={{ fontSize: "14px", fontWeight: "600", color: "#2f5bea", background: "#eff6ff", padding: "3px 8px", borderRadius: "6px" }}>ADMIN</span>
-          </h1>
-        </div>
-
-        <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
-          <button onClick={() => (window.location.href = "/admin/dashboard")} style={{ background: "none", border: "none", fontWeight: "600", color: "#64748b", cursor: "pointer", fontSize: "14px" }}>
-            Dashboard
-          </button>
-          <button onClick={() => (window.location.href = "/admin/students")} style={{ background: "none", border: "none", fontWeight: "600", color: "#64748b", cursor: "pointer", fontSize: "14px" }}>
-            Students
-          </button>
-          <button onClick={() => (window.location.href = "/admin/experts")} style={{ background: "none", border: "none", fontWeight: "600", color: "#64748b", cursor: "pointer", fontSize: "14px" }}>
-            Experts
-          </button>
-          <button onClick={() => (window.location.href = "/admin/careers")} style={{ background: "none", border: "none", fontWeight: "600", color: "#64748b", cursor: "pointer", fontSize: "14px" }}>
-            Careers & Skills
-          </button>
-          <button onClick={() => (window.location.href = "/admin/quizzes")} style={{ background: "none", border: "none", fontWeight: "600", color: "#64748b", cursor: "pointer", fontSize: "14px" }}>
-            Quizzes & Tests
-          </button>
-          <button onClick={() => (window.location.href = "/admin/announcements")} style={{ background: "none", border: "none", fontWeight: "600", color: "#64748b", cursor: "pointer", fontSize: "14px" }}>
-            Announcements & Moderation
-          </button>
-          <button onClick={() => (window.location.href = "/admin/reports")} style={{ background: "none", border: "none", fontWeight: "700", color: "#2f5bea", cursor: "pointer", fontSize: "14px" }}>
-            Reports & Analytics
-          </button>
-        </div>
-      </header>
-
+    <AdminLayout activePage="reports" pageTitle="Reports & Analytics">
       <main className="admin-students-content">
         <button className="admin-back-button" onClick={() => (window.location.href = "/admin/dashboard")}>
           <i className="bi bi-arrow-left"></i> Back to Dashboard
@@ -115,7 +84,7 @@ const AdminReports = () => {
               </div>
 
               {/* Monthly Engagement Table */}
-              <div style={{ background: "#ffffff", padding: "24px", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
+              {/* <div style={{ background: "#ffffff", padding: "24px", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
                 <h3 style={{ margin: "0 0 16px 0", fontSize: "18px" }}>Monthly Engagement Growth</h3>
                 <table className="admin-table">
                   <thead>
@@ -137,12 +106,12 @@ const AdminReports = () => {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </div> */}
             </div>
           </div>
         )}
       </main>
-    </div>
+    </AdminLayout>
   );
 };
 

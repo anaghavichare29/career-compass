@@ -1,4 +1,5 @@
 import { useState } from "react";
+import MentorLayout from "../../components/mentor/MentorLayout";
 import "./IndustryExperts.css";
 
 const expertsData = [
@@ -103,49 +104,8 @@ function IndustryExperts() {
   };
 
   return (
-    <div className="experts-page">
-
-      {/* =================================================
-          HEADER
-      ================================================= */}
-
-      <header className="experts-header">
-
-        <div className="experts-brand">
-          <h1>CareerCompass</h1>
-        </div>
-
-        <div className="experts-header-actions">
-
-          <button
-            className="notification-button"
-            type="button"
-          >
-            🔔
-          </button>
-
-          <div className="profile-mini">
-
-            <div className="profile-avatar">
-              {initial}
-            </div>
-
-            <span>
-              {fullName}
-            </span>
-
-          </div>
-
-        </div>
-
-      </header>
-
-
-      {/* =================================================
-          MAIN CONTENT
-      ================================================= */}
-
-      <main className="experts-content">
+    <MentorLayout activePage="directory" pageTitle="Industry Experts Directory">
+      <div className="experts-content" style={{ padding: "32px 40px 60px", maxWidth: "1400px", margin: "0 auto" }}>
 
 
         {/* =================================================
@@ -363,9 +323,8 @@ function IndustryExperts() {
 
         </section>
 
-      </main>
-
-    </div>
+      </div>
+    </MentorLayout>
   );
 }
 

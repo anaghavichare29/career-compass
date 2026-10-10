@@ -40,7 +40,7 @@ for col, col_type in quiz_cols:
         print(f"quiz_attempts column {col}: {e}")
 
 # 3. Create notifications table if not exists
-try:
+try:\
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS notifications (
         id BIGINT AUTO_INCREMENT PRIMARY KEY,

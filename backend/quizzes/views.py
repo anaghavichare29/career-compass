@@ -61,10 +61,16 @@ class GenerateNewQuizView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        skills = get_skills_for_user(user_id)
+        skills = get_skills_for_user(user_id) or ["General Aptitude"]
         import random
         skill = random.choice(skills)
-        quiz = generate_quiz_for_skill(user_id, skill, source='ai', status='approved')
+        try:
+            quiz = generate_quiz_for_skill(user_id, skill, source='ai', status='approved')
+        except Exception as exc:
+            return Response(
+                {"detail": "Quiz generation failed. Please try again.", "error": str(exc)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
         return Response(QuizListSerializer(quiz, context={'user_id': user_id}).data, status=status.HTTP_201_CREATED)
 

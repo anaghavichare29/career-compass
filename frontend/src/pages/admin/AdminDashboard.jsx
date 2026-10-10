@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import api from "../../services/api";
+import AdminLayout from "../../components/admin/AdminLayout";
 import "./AdminDashboard.css";
 
 const defaultStats = [
@@ -12,7 +13,6 @@ const defaultStats = [
 const AdminDashboard = () => {
   const user = JSON.parse(localStorage.getItem("user"));
   const fullName = user ? `${user.first_name} ${user.last_name || ""}`.trim() : "Admin";
-  const initial = user?.first_name ? user.first_name.charAt(0).toUpperCase() : "A";
 
   const [stats, setStats] = useState(defaultStats);
   const [recentStudents, setRecentStudents] = useState([]);
@@ -47,76 +47,8 @@ const AdminDashboard = () => {
   }, []);
 
   return (
-    <div className="admin-page">
-      {/* =================================================
-          HEADER
-      ================================================= */}
-      <header className="admin-header">
-        <div className="admin-brand">
-          <h1 onClick={() => (window.location.href = "/admin/dashboard")} style={{ cursor: "pointer" }}>
-            CareerCompass <span style={{ fontSize: "14px", fontWeight: "600", color: "#2f5bea", background: "#eff6ff", padding: "3px 8px", borderRadius: "6px" }}>ADMIN</span>
-          </h1>
-        </div>
-
-        {/* Navigation Links */}
-        <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
-          <button onClick={() => (window.location.href = "/admin/dashboard")} style={{ background: "none", border: "none", fontWeight: "700", color: "#2f5bea", cursor: "pointer", fontSize: "14px" }}>
-            Dashboard
-          </button>
-          <button onClick={() => (window.location.href = "/admin/students")} style={{ background: "none", border: "none", fontWeight: "600", color: "#64748b", cursor: "pointer", fontSize: "14px" }}>
-            Students
-          </button>
-          <button onClick={() => (window.location.href = "/admin/experts")} style={{ background: "none", border: "none", fontWeight: "600", color: "#64748b", cursor: "pointer", fontSize: "14px" }}>
-            Experts
-          </button>
-          <button onClick={() => (window.location.href = "/admin/careers")} style={{ background: "none", border: "none", fontWeight: "600", color: "#64748b", cursor: "pointer", fontSize: "14px" }}>
-            Careers & Skills
-          </button>
-          <button onClick={() => (window.location.href = "/admin/quizzes")} style={{ background: "none", border: "none", fontWeight: "600", color: "#64748b", cursor: "pointer", fontSize: "14px" }}>
-            Quizzes & Tests
-          </button>
-          <button onClick={() => (window.location.href = "/admin/announcements")} style={{ background: "none", border: "none", fontWeight: "600", color: "#64748b", cursor: "pointer", fontSize: "14px" }}>
-            Announcements & Moderation
-          </button>
-          <button onClick={() => (window.location.href = "/admin/reports")} style={{ background: "none", border: "none", fontWeight: "600", color: "#64748b", cursor: "pointer", fontSize: "14px" }}>
-            Reports & Analytics
-          </button>
-        </div>
-
-        <div className="admin-header-right">
-          <div className="admin-profile">
-            <div className="admin-avatar">{initial}</div>
-            <div className="admin-profile-info">
-              <strong>{fullName}</strong>
-              <small>Administrator</small>
-            </div>
-          </div>
-
-          <button
-            onClick={() => {
-              localStorage.removeItem("user");
-              window.location.href = "/";
-            }}
-            style={{
-              padding: "6px 12px",
-              borderRadius: "6px",
-              border: "1px solid #cbd5e1",
-              background: "#ffffff",
-              cursor: "pointer",
-              fontSize: "13px",
-              fontWeight: "600",
-              color: "#64748b",
-            }}
-          >
-            <i className="bi bi-box-arrow-right"></i> Logout
-          </button>
-        </div>
-      </header>
-
-      {/* =================================================
-          CONTENT
-      ================================================= */}
-      <main className="admin-content">
+    <AdminLayout activePage="dashboard" pageTitle="Dashboard">
+      <div className="admin-content">
         {/* WELCOME */}
         <section className="admin-welcome">
           <div>
@@ -155,7 +87,7 @@ const AdminDashboard = () => {
         {/* MAIN GRID */}
         <section className="admin-main-grid">
           {/* USER ACTIVITY BARS */}
-          <div className="admin-card admin-overview-card">
+          {/* <div className="admin-card admin-overview-card">
             <div className="admin-card-header">
               <div>
                 <span className="admin-section-label">PLATFORM OVERVIEW</span>
@@ -194,7 +126,7 @@ const AdminDashboard = () => {
                 </div>
               </div>
             </div>
-          </div>
+          </div> */}
 
           {/* QUICK ACTIONS */}
           <div className="admin-card">
@@ -343,7 +275,7 @@ const AdminDashboard = () => {
         </section>
 
         {/* AI & PLATFORM SYSTEM CARD */}
-        <section className="admin-ai-card">
+        {/* <section className="admin-ai-card">
           <div className="admin-ai-icon">
             <i className="bi bi-stars"></i>
           </div>
@@ -359,9 +291,9 @@ const AdminDashboard = () => {
             <strong>Active & Healthy</strong>
             <small>All Systems Normal</small>
           </div>
-        </section>
-      </main>
-    </div>
+        </section> */}
+      </div>
+    </AdminLayout>
   );
 };
 

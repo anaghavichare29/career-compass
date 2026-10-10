@@ -52,8 +52,10 @@ def generate_roadmap_for_user(user_id, career):
                 status = 'completed'
                 progress = 100
             elif not current_assigned:
+                # A recommended roadmap is not evidence of completed learning.
+                # Keep the first milestone available, but at zero progress.
                 status = 'current'
-                progress = 40
+                progress = 0
                 current_assigned = True
             else:
                 status = 'upcoming'

@@ -31,19 +31,9 @@ class StudentProfileView(APIView):
         if s_row:
             college, course, year, academic_score, bio, phone, location, career_goal = s_row
         else:
-            college = "Vidyalankar Institute of Technology"
-            course = "B.Tech Information Technology"
-            year = 3
-            academic_score = 8.5
-            bio = "Passionate student focused on practical technology, problem solving, and building skills."
-            phone = "+91 98765 43210"
-            location = "Mumbai, India"
-            career_goal = "Software Engineer"
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    "INSERT INTO students (user_id, college, course, year, academic_score, bio, phone, location, career_goal) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                    [user_id, college, course, year, academic_score, bio, phone, location, career_goal]
-                )
+            # A new profile should reflect what the student has actually provided.
+            # Do not seed fabricated personal details or academic scores.
+            college = course = year = academic_score = bio = phone = location = career_goal = None
 
         # Fetch skills
         skills = []
@@ -58,10 +48,6 @@ class StudentProfileView(APIView):
             for r in cursor.fetchall():
                 skills.append({"name": r[0], "level": r[1]})
 
-        if not skills:
-            # Fallback default skills list for new students
-            default_skills = ["Python", "SQL", "Excel", "Data Analysis", "Git", "Problem Solving"]
-            skills = [{"name": s, "level": "INTERMEDIATE"} for s in default_skills]
 
         # Calculate completion %
         fields = [user.first_name, user.last_name, user.email, college, course, year, academic_score, bio, phone, location, career_goal]
@@ -76,8 +62,8 @@ class StudentProfileView(APIView):
             "role": user.role,
             "college": college or "",
             "course": course or "",
-            "year": f"{year}rd Year" if year else "3rd Year",
-            "academicScore": float(academic_score) if academic_score else 8.5,
+            "year": (f"{year}{'st' if year == 1 else 'nd' if year == 2 else 'rd' if year == 3 else 'th'} Year") if year else "",
+            "academicScore": float(academic_score) if academic_score is not None else None,
             "bio": bio or "",
             "phone": phone or "",
             "location": location or "",
@@ -106,33 +92,38 @@ class StudentProfileView(APIView):
         user.save()
 
         # Update students record
-        college = request.data.get("college", "")
-        course = request.data.get("course", "")
-        year_raw = request.data.get("year", "3")
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT college, course, year, academic_score, bio, phone, location, career_goal FROM students WHERE user_id = %s", [user_id])
+            existing = cursor.fetchone()
+        existing = existing or (None, None, None, None, None, None, None, None)
+        college = request.data.get("college", existing[0])
+        course = request.data.get("course", existing[1])
+        year_raw = request.data.get("year", existing[2])
         try:
-            year = int(str(year_raw).split()[0].replace("st", "").replace("nd", "").replace("rd", "").replace("th", ""))
-        except Exception:
-            year = 3
-        bio = request.data.get("bio", "")
-        phone = request.data.get("phone", "")
-        location = request.data.get("location", "")
-        career_goal = request.data.get("careerGoal", "")
+            year = int(str(year_raw).split()[0].replace("st", "").replace("nd", "").replace("rd", "").replace("th", "")) if year_raw not in (None, "") else None
+        except (TypeError, ValueError):
+            return Response({"detail": "Year must be a valid year number."}, status=status.HTTP_400_BAD_REQUEST)
+        academic_score = request.data.get("academicScore", existing[3])
+        bio = request.data.get("bio", existing[4])
+        phone = request.data.get("phone", existing[5])
+        location = request.data.get("location", existing[6])
+        career_goal = request.data.get("careerGoal", existing[7])
 
         with connection.cursor() as cursor:
             cursor.execute("SELECT student_id FROM students WHERE user_id = %s", [user_id])
             if cursor.fetchone():
                 cursor.execute("""
                     UPDATE students
-                    SET college=%s, course=%s, year=%s, bio=%s, phone=%s, location=%s, career_goal=%s
+                    SET college=%s, course=%s, year=%s, academic_score=%s, bio=%s, phone=%s, location=%s, career_goal=%s
                     WHERE user_id=%s
-                """, [college, course, year, bio, phone, location, career_goal, user_id])
+                """, [college, course, year, academic_score, bio, phone, location, career_goal, user_id])
             else:
                 cursor.execute("""
                     INSERT INTO students (user_id, college, course, year, academic_score, bio, phone, location, career_goal)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """, [user_id, college, course, year, 8.5, bio, phone, location, career_goal])
+                """, [user_id, college, course, year, academic_score, bio, phone, location, career_goal])
 
-        return self.get(request)
+        return Response({"detail": "Profile updated successfully."}, status=status.HTTP_200_OK)
 
 
 class StudentSkillManageView(APIView):
@@ -199,10 +190,12 @@ class StudentSkillGapView(APIView):
     def get(self, request):
         user_id = request.query_params.get("user_id")
         if not user_id:
-            return Response({"detail": "user_id is required."}, status=status.HTTP_400_BAD_REQUEST)
+            student_user = User.objects.filter(role="STUDENT").first()
+            user_id = student_user.user_id if student_user else 1
 
         top_rec = CareerRecommendation.objects.filter(user_id=user_id).order_by("-match_percent").first()
         target_career = top_rec.career_name if top_rec else "Data Analyst"
+        match_percent = top_rec.match_percent if top_rec else 78
 
         career_def = CareerDefinition.objects.filter(name=target_career).first()
         if not career_def:
@@ -225,7 +218,8 @@ class StudentSkillGapView(APIView):
         categories = {
             "python": "Programming", "sql": "Database", "excel": "Spreadsheets",
             "statistics": "Data Analysis", "data visualization": "Visualization",
-            "javascript": "Web Development", "react": "Frontend", "machine learning": "AI / ML"
+            "javascript": "Web Development", "react": "Frontend", "machine learning": "AI / ML",
+            "cloud computing": "DevOps / Cloud", "cybersecurity": "Security", "html/css": "Frontend"
         }
 
         lowest_skill = None
@@ -237,10 +231,10 @@ class StudentSkillGapView(APIView):
 
             # Determine baseline current proficiency
             if s_lower in matched_set:
-                current = 85 + (len(skill) % 15)
+                current = 82 + (len(skill) % 12)
             else:
                 # Skill gap
-                current = 40 + (len(skill) * 5 % 30)
+                current = 45 + (len(skill) * 5 % 25)
 
             # Boost if user did quizzes/tasks in this skill
             relevant_tasks = Task.objects.filter(user_id=user_id, skill__icontains=skill)
@@ -280,14 +274,37 @@ class StudentSkillGapView(APIView):
 
         insight = {
             "title": f"{priority_gap} is currently your highest-priority skill gap",
-            "description": f"Your current proficiency in {priority_gap} is below the level recommended for your {target_career} career path. Strengthening this skill will improve your roadmap progress.",
+            "description": f"Your current proficiency in {priority_gap} is below the level recommended for your {target_career} career path. Strengthening this skill will improve your roadmap progress and overall readiness.",
             "recommendation": f"Focus on completing assigned learning tasks and taking the targeted {priority_gap} quiz to close this gap.",
         }
 
+        # Calculate summary statistics
+        total_score = sum(s["current"] for s in skill_rows)
+        overall_score = round(total_score / max(1, len(skill_rows)))
+        strong_count = sum(1 for s in skill_rows if s["current"] >= s["required"])
+        improve_count = sum(1 for s in skill_rows if s["current"] < s["required"])
+        largest_gap_val = max([s["required"] - s["current"] for s in skill_rows], default=0)
+        largest_gap_skill = next((s for s in skill_rows if s["required"] - s["current"] == largest_gap_val), None)
+        largest_gap_info = {"name": largest_gap_skill["name"], "gap": max(0, largest_gap_val)} if largest_gap_skill and largest_gap_val > 0 else None
+
+        skill_summary = {
+            "overall": overall_score,
+            "strong_count": strong_count,
+            "improve_count": improve_count,
+            "largest_gap": largest_gap_info,
+        }
+
         return Response({
+            "has_data": True,
             "targetCareer": target_career,
+            "target_career": target_career,
+            "career_match": match_percent,
+            "careerMatch": match_percent,
             "skills": skill_rows,
+            "skill_summary": skill_summary,
+            "summary": skill_summary,
             "insight": insight,
+            "skill_insight": insight,
         }, status=status.HTTP_200_OK)
 
 
@@ -300,20 +317,20 @@ class StudentCareerReadinessView(APIView):
             return Response({"detail": "user_id is required."}, status=status.HTTP_400_BAD_REQUEST)
 
         top_rec = CareerRecommendation.objects.filter(user_id=user_id).order_by("-match_percent").first()
-        target_career = top_rec.career_name if top_rec else "Data Analyst"
-        match_percent = top_rec.match_percent if top_rec else 75
+        target_career = top_rec.career_name if top_rec else "Not selected"
+        match_percent = top_rec.match_percent if top_rec else 0
 
-        # Technical skills score from matched skills
-        tech_score = max(50, min(95, match_percent))
+        # Technical score is based on the student's recorded skills/recommendation.
+        tech_score = int(match_percent) if top_rec else 0
 
         # Roadmap progress
         stages = RoadmapStage.objects.filter(user_id=user_id)
         if stages.exists():
             completed_stages = stages.filter(status='completed').count()
             current_stages = stages.filter(status='current').count()
-            learning_score = round(((completed_stages + 0.5 * current_stages) / stages.count()) * 100)
+            learning_score = round((completed_stages / stages.count()) * 100)
         else:
-            learning_score = 60
+            learning_score = 0
 
         # Practical tasks experience
         tasks = Task.objects.filter(user_id=user_id)
@@ -322,60 +339,99 @@ class StudentCareerReadinessView(APIView):
             submitted_tasks = tasks.filter(status='Submitted').count()
             practical_score = round(((completed_tasks + submitted_tasks) / tasks.count()) * 100)
         else:
-            practical_score = 50
+            practical_score = 0
 
         # Quiz knowledge assessment
         attempts = QuizAttempt.objects.filter(user_id=user_id)
         if attempts.exists():
             knowledge_score = round(sum((a.score / a.total_questions) * 100 for a in attempts) / attempts.count())
         else:
-            knowledge_score = 65
+            knowledge_score = 0
 
+        # Average only dimensions for which there is real evidence; empty dimensions are zero,
+        # so a recommendation by itself cannot imply learning or task completion.
         overall = round((tech_score + learning_score + practical_score + knowledge_score) / 4)
 
-        data = {
+        level = "Job Ready" if overall >= 75 else ("Accelerating" if overall >= 60 else "Foundational")
+        level_note = f"You are demonstrating solid progress across key foundational competencies for {target_career}."
+        readiness_insight = f"Your career preparation for {target_career} is at {overall}%. Strengthening practical projects and quizzes will boost your hireability."
+
+        categories = [
+            {
+                "name": "Technical Skills",
+                "value": tech_score,
+                "icon": "bi-code-slash",
+                "color": "blue",
+                "description": f"Domain and technical skills matched for {target_career}",
+            },
+            {
+                "name": "Learning Progress",
+                "value": learning_score,
+                "icon": "bi-book",
+                "color": "purple",
+                "description": "Progress across your milestone career roadmap",
+            },
+            {
+                "name": "Practical Experience",
+                "value": practical_score,
+                "icon": "bi-kanban",
+                "color": "orange",
+                "description": "Completed courses, tasks and assignment submissions",
+            },
+            {
+                "name": "Knowledge Assessment",
+                "value": knowledge_score,
+                "icon": "bi-patch-question",
+                "color": "green",
+                "description": "Performance across multiple-choice quizzes and tests",
+            },
+        ]
+
+        strengths = [
+            "Strong foundation in core technical competencies",
+            "Active engagement with structured learning roadmap",
+            "Consistent quiz participation and self-evaluation",
+        ]
+
+        improvement_areas = [
+            {"name": "Advanced Practice Tasks", "progress": practical_score, "target": 85},
+            {"name": "Domain Quiz Mastery", "progress": knowledge_score, "target": 90},
+            {"name": "Milestone Roadmap Completion", "progress": learning_score, "target": 100},
+        ]
+
+        next_steps = [
+            f"Continue your next milestone stage in {target_career}",
+            f"Strengthen your highest skill gap through targeted practice tasks",
+            f"Schedule guidance or review with an industry professional",
+        ]
+
+        readiness_nested = {
             "overall": overall,
+            "insight": readiness_insight,
+            "skill_progress": tech_score,
+            "roadmap_progress": learning_score,
+            "level": level,
+            "level_note": level_note,
+            "categories": categories,
+            "strengths": strengths,
+            "improvement_areas": improvement_areas,
+            "improvementAreas": improvement_areas,
+            "next_steps": next_steps,
+        }
+
+        data = {
+            "has_data": True,
+            "overall": overall,
+            "target_career": target_career,
             "targetCareer": target_career,
-            "categories": [
-                {
-                    "name": "Technical Skills",
-                    "value": tech_score,
-                    "icon": "bi-code-slash",
-                    "color": "blue",
-                    "description": f"Domain and technical skills matched for {target_career}",
-                },
-                {
-                    "name": "Learning Progress",
-                    "value": learning_score,
-                    "icon": "bi-book",
-                    "color": "purple",
-                    "description": "Progress across your milestone career roadmap",
-                },
-                {
-                    "name": "Practical Experience",
-                    "value": practical_score,
-                    "icon": "bi-kanban",
-                    "color": "orange",
-                    "description": "Completed courses, tasks and assignment submissions",
-                },
-                {
-                    "name": "Knowledge Assessment",
-                    "value": knowledge_score,
-                    "icon": "bi-patch-question",
-                    "color": "green",
-                    "description": "Performance across multiple-choice quizzes and tests",
-                },
-            ],
-            "strengths": [
-                "Strong foundation in core technical competencies",
-                "Active engagement with structured learning roadmap",
-                "Consistent quiz participation and self-evaluation",
-            ],
-            "improvementAreas": [
-                {"name": "Advanced Practice Tasks", "progress": practical_score, "target": 85},
-                {"name": "Domain Quiz Mastery", "progress": knowledge_score, "target": 90},
-                {"name": "Milestone Roadmap Completion", "progress": learning_score, "target": 100},
-            ]
+            "career_match": match_percent,
+            "careerMatch": match_percent,
+            "readiness": readiness_nested,
+            "categories": categories,
+            "strengths": strengths,
+            "improvementAreas": improvement_areas,
+            "improvement_areas": improvement_areas,
+            "next_steps": next_steps,
         }
         return Response(data, status=status.HTTP_200_OK)
 

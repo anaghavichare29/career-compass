@@ -223,18 +223,27 @@ def _generate_roadmap(user_id, career, matched_skill_names):
         deadline_date = today + datetime.timedelta(days=stage_days[min(stage_index, len(stage_days) - 1)])
 
         for skill_name in skill_names:
-            if skill_name in matched_skill_names:
-                status, progress = 'completed', 100
-                completed_lessons = 8
-            elif not current_assigned:
-                status, progress = 'current', 40
-                completed_lessons = 3
+            # Self-reported confidence or a career match is not proof that a
+            # roadmap skill/course has been completed. Every new roadmap starts
+            # at zero; progress changes only when the student completes lessons.
+            if not current_assigned:
+                status, progress = 'current', 0
                 current_assigned = True
             else:
                 status, progress = 'upcoming', 0
-                completed_lessons = 0
+            completed_lessons = 0
 
-            RoadmapSkill.objects.create(stage=stage, name=skill_name, status=status, progress=progress)
+            from roadmaps.skill_content import get_skill_content
+            content = get_skill_content(skill_name)
+            RoadmapSkill.objects.create(
+                stage=stage,
+                name=skill_name,
+                status=status,
+                progress=progress,
+                what_to_learn=content["what_to_learn"],
+                why_it_matters=content["why_it_matters"],
+                resources=content["resources"],
+            )
             stage_statuses.append(status)
 
             # Generate suggested course & task
@@ -262,4 +271,4 @@ def _generate_roadmap(user_id, career, matched_skill_names):
 
     # Recalculate progress summary
     from tasks.views import _recalculate_user_progress
-    _recalculate_user_progress(user_id)
+    _recalculate_user_progress(user_id)

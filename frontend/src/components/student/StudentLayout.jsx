@@ -1,6 +1,7 @@
 import React from "react";
 import StudentSidebar from "./StudentSidebar";
 import StudentNavbar from "./StudentNavbar";
+import "../../pages/student/StudentDashboard.css";
 
 const StudentLayout = ({ children, pageTitle = "Dashboard" }) => {
   return (

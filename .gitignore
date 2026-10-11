@@ -1,3 +1,5 @@
+*.zip
+
 backend/.env
 backend/venv/
 __pycache__/

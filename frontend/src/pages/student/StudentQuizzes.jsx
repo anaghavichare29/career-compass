@@ -40,6 +40,8 @@ const StudentQuizzes = () => {
   ]);
   const [createSubmitting, setCreateSubmitting] = useState(false);
   const [createMessage, setCreateMessage] = useState("");
+  const [mySubmissions, setMySubmissions] = useState([]);
+  const [myMentors, setMyMentors] = useState([]);
 
   const user = JSON.parse(localStorage.getItem("user"));
 
@@ -47,12 +49,16 @@ const StudentQuizzes = () => {
     setLoading(true);
     setError("");
     try {
-      const [quizRes, attemptsRes] = await Promise.all([
+      const [quizRes, attemptsRes, submissionsRes, mentorsRes] = await Promise.all([
         api.get("quizzes/", { params: { user_id: user?.user_id } }),
         api.get("quizzes/my-attempts/", { params: { user_id: user?.user_id } }),
+        api.get("quizzes/my-submissions/", { params: { user_id: user?.user_id } }).catch(() => ({ data: [] })),
+        api.get("mentorship/my-mentors/", { params: { user_id: user?.user_id } }).catch(() => ({ data: [] })),
       ]);
       setQuizzes(quizRes.data);
       setAttempts(attemptsRes.data);
+      setMySubmissions(submissionsRes.data);
+      setMyMentors(mentorsRes.data);
     } catch (err) {
       console.error("Failed to load quizzes:", err);
       setError("Could not load your quizzes right now.");
@@ -110,8 +116,11 @@ const StudentQuizzes = () => {
   }, [selectedQuiz, quizFinished, isTimeBound]);
 
   const completedQuizIds = new Set(attempts.map((a) => a.quiz));
-  const allCompleted =
-    quizzes.length > 0 && quizzes.every((q) => completedQuizIds.has(q.id));
+  // Matches the backend rule: a new quiz unlocks once every AI quiz has been attempted
+  // (retakes and student-made quizzes don't count against the student).
+  const aiQuizzes = quizzes.filter((q) => q.source === "ai");
+  const remainingAiQuizzes = aiQuizzes.filter((q) => !completedQuizIds.has(q.id));
+  const allCompleted = aiQuizzes.length > 0 && remainingAiQuizzes.length === 0;
 
   const averageScore = attempts.length
     ? Math.round(
@@ -221,9 +230,9 @@ const StudentQuizzes = () => {
     setGenerating(true);
     setGenerateMessage("");
     try {
-      await api.post("quizzes/generate-new/", { user_id: user?.user_id });
-      setGenerateMessage("New quiz generated!");
-      loadData();
+      const res = await api.post("quizzes/generate-new/", { user_id: user?.user_id });
+      setGenerateMessage(`New quiz ready: ${res.data?.title || "check your quiz list"}`);
+      await loadData();
     } catch (err) {
       const detail =
         err.response?.data?.detail ||
@@ -271,7 +280,7 @@ const StudentQuizzes = () => {
     setCreateMessage("");
 
     try {
-      await api.post("quizzes/create/", {
+      const createRes = await api.post("quizzes/create/", {
         user_id: user?.user_id,
         title: createTitle,
         skill: createSkill,
@@ -282,7 +291,9 @@ const StudentQuizzes = () => {
       });
 
       setCreateMessage(
-        "Quiz submitted successfully! An industry expert will evaluate and approve it before posting.",
+        createRes.data.mentors_notified > 0
+          ? "Quiz submitted successfully! Your mentor has been notified and will review it."
+          : "Quiz saved successfully! You are not connected with a mentor yet. It will be reviewed once a mentor accepts your guidance request.",
       );
       setTimeout(() => {
         setShowCreateModal(false);
@@ -297,7 +308,7 @@ const StudentQuizzes = () => {
       }, 2500);
     } catch (err) {
       console.error("Failed to create quiz:", err);
-      setCreateMessage("Failed to submit quiz. Please try again.");
+      setCreateMessage(err.response?.data?.detail || "Failed to submit quiz. Please try again.");
     } finally {
       setCreateSubmitting(false);
     }
@@ -613,7 +624,7 @@ const StudentQuizzes = () => {
             <p>
               {allCompleted
                 ? "You've completed every quiz available to you. Generate a new 10-question quiz generated via Gemini API."
-                : `You have ${quizzes.length - attempts.length} quiz(zes) left before you can generate a new one.`}
+                : `You have ${remainingAiQuizzes.length} quiz${remainingAiQuizzes.length === 1 ? "" : "zes"} left before you can generate a new one.`}
             </p>
             {generateMessage && (
               <div className="ai-quiz-reason">
@@ -645,8 +656,8 @@ const StudentQuizzes = () => {
               className="quiz-secondary-button"
               onClick={() => setShowCreateModal(true)}
             >
-              <i className="bi bi-plus-lg"></i>
-              Create Your Own Quiz
+              <i className="bi bi-send"></i>
+              Create Quiz &amp; Send to Mentor
             </button>
           </div>
 
@@ -851,6 +862,52 @@ const StudentQuizzes = () => {
         )}
 
         {/* CREATE QUIZ MODAL */}
+        <section className="quiz-section">
+          <div className="quiz-section-header">
+            <div>
+              <span className="student-section-label">MENTOR REVIEW</span>
+              <h2>My Quiz Submissions</h2>
+              <p>Quizzes you created and sent to your mentor, with their review status.</p>
+            </div>
+          </div>
+
+          {mySubmissions.length === 0 ? (
+            <div className="my-sub-empty">
+              <i className="bi bi-send"></i>
+              <p>
+                You haven't sent any quizzes yet. Use <strong>Create Quiz &amp; Send to Mentor</strong> above
+                to write your own questions for your mentor to review.
+              </p>
+            </div>
+          ) : (
+            <div className="my-sub-list">
+              {mySubmissions.map((sub) => (
+                <article className="my-sub-row" key={sub.id}>
+                  <div className="my-sub-main">
+                    <strong>{sub.title}</strong>
+                    <span>
+                      {sub.skill} • {sub.difficulty} • {sub.question_count} question
+                      {sub.question_count === 1 ? "" : "s"}
+                    </span>
+                    {sub.review_notes && sub.status !== "pending" && (
+                      <p className="my-sub-notes">
+                        <i className="bi bi-chat-left-text"></i> Mentor: {sub.review_notes}
+                      </p>
+                    )}
+                  </div>
+                  <span className={`my-sub-status ${sub.status}`}>
+                    {sub.status === "approved"
+                      ? "Approved"
+                      : sub.status === "rejected"
+                        ? "Needs changes"
+                        : "Waiting for mentor"}
+                  </span>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+
         {showCreateModal && (
           <div
             style={{
@@ -899,7 +956,7 @@ const StudentQuizzes = () => {
 
               <span className="student-section-label">STUDENT COMMUNITY</span>
               <h2 style={{ margin: "0.3rem 0 0.5rem", fontSize: "1.3rem" }}>
-                Create a Peer Quiz
+                Create a Quiz for Mentor Review
               </h2>
               <p
                 style={{
@@ -908,10 +965,31 @@ const StudentQuizzes = () => {
                   marginBottom: "1.25rem",
                 }}
               >
-                Write your questions. An industry expert will evaluate their
-                relevance and validity before the quiz is published to other
-                students.
+                Write your questions and send the quiz to your mentor. They check
+                the questions and answer key, and once approved the quiz is added
+                to your quiz list.
               </p>
+
+              {myMentors.length > 0 ? (
+                <div className="quiz-mentor-banner ok">
+                  <i className="bi bi-person-check-fill"></i>
+                  <span>
+                    Will be sent to:{" "}
+                    <strong>
+                      {myMentors.map((m) => `${m.name}${m.company ? ` (${m.company})` : ""}`).join(", ")}
+                    </strong>
+                  </span>
+                </div>
+              ) : (
+                <div className="quiz-mentor-banner warn">
+                  <i className="bi bi-exclamation-triangle-fill"></i>
+                  <span>
+                    You are not connected with a mentor yet. Your quiz will be saved and reviewed once a
+                    mentor accepts your{" "}
+                    <a href="/student/industry-professionals">guidance request</a>.
+                  </span>
+                </div>
+              )}
 
               {createMessage && (
                 <div
@@ -1211,7 +1289,7 @@ const StudentQuizzes = () => {
                     <i className="bi bi-send"></i>
                     {createSubmitting
                       ? "Submitting..."
-                      : "Submit for Expert Evaluation"}
+                      : "Send to Mentor for Review"}
                   </button>
                 </div>
               </form>

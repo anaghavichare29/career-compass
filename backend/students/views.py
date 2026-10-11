@@ -9,6 +9,9 @@ from roadmaps.models import RoadmapStage
 from tasks.models import Task
 from quizzes.models import QuizAttempt, Quiz
 from progress.models import ProgressSummary
+from progress.insights import build_insights, has_taken_assessment
+from roadmaps.models import RoadmapSkill
+from roadmaps.services import sync_roadmap_progress
 
 
 class StudentProfileView(APIView):
@@ -189,123 +192,9 @@ class StudentSkillGapView(APIView):
 
     def get(self, request):
         user_id = request.query_params.get("user_id")
-        if not user_id:
-            student_user = User.objects.filter(role="STUDENT").first()
-            user_id = student_user.user_id if student_user else 1
-
-        top_rec = CareerRecommendation.objects.filter(user_id=user_id).order_by("-match_percent").first()
-        target_career = top_rec.career_name if top_rec else "Data Analyst"
-        match_percent = top_rec.match_percent if top_rec else 78
-
-        career_def = CareerDefinition.objects.filter(name=target_career).first()
-        if not career_def:
-            career_def = CareerDefinition.objects.first()
-
-        req_skills = career_def.skills_list() if career_def else ["Python", "SQL", "Excel", "Statistics", "Data Visualization"]
-
-        # User's known skills from recommendation
-        matched_set = set()
-        if top_rec and top_rec.matched_skills:
-            matched_set = set(s.strip().lower() for s in top_rec.matched_skills.split(",") if s.strip())
-
-        # Also check quiz attempts & tasks for progress
-        attempts = QuizAttempt.objects.filter(user_id=user_id)
-        avg_quiz_score = 0
-        if attempts.exists():
-            avg_quiz_score = round(sum((a.score / a.total_questions) * 100 for a in attempts) / attempts.count())
-
-        skill_rows = []
-        categories = {
-            "python": "Programming", "sql": "Database", "excel": "Spreadsheets",
-            "statistics": "Data Analysis", "data visualization": "Visualization",
-            "javascript": "Web Development", "react": "Frontend", "machine learning": "AI / ML",
-            "cloud computing": "DevOps / Cloud", "cybersecurity": "Security", "html/css": "Frontend"
-        }
-
-        lowest_skill = None
-        min_current = 999
-
-        for skill in req_skills:
-            s_lower = skill.lower()
-            cat = categories.get(s_lower, "Technical Skill")
-
-            # Determine baseline current proficiency
-            if s_lower in matched_set:
-                current = 82 + (len(skill) % 12)
-            else:
-                # Skill gap
-                current = 45 + (len(skill) * 5 % 25)
-
-            # Boost if user did quizzes/tasks in this skill
-            relevant_tasks = Task.objects.filter(user_id=user_id, skill__icontains=skill)
-            if relevant_tasks.exists():
-                comp = relevant_tasks.filter(status="Completed").count()
-                current = min(100, current + comp * 15)
-
-            required = 85
-
-            if current >= 80:
-                status_label = "Strong"
-                color = "green"
-            elif current >= 65:
-                status_label = "Almost There"
-                color = "blue"
-            elif current >= 45:
-                status_label = "Needs Improvement"
-                color = "orange"
-            else:
-                status_label = "Beginner"
-                color = "purple"
-
-            skill_rows.append({
-                "name": skill,
-                "category": cat,
-                "current": current,
-                "required": required,
-                "status": status_label,
-                "color": color,
-            })
-
-            if current < min_current:
-                min_current = current
-                lowest_skill = skill
-
-        priority_gap = lowest_skill or "Core Fundamentals"
-
-        insight = {
-            "title": f"{priority_gap} is currently your highest-priority skill gap",
-            "description": f"Your current proficiency in {priority_gap} is below the level recommended for your {target_career} career path. Strengthening this skill will improve your roadmap progress and overall readiness.",
-            "recommendation": f"Focus on completing assigned learning tasks and taking the targeted {priority_gap} quiz to close this gap.",
-        }
-
-        # Calculate summary statistics
-        total_score = sum(s["current"] for s in skill_rows)
-        overall_score = round(total_score / max(1, len(skill_rows)))
-        strong_count = sum(1 for s in skill_rows if s["current"] >= s["required"])
-        improve_count = sum(1 for s in skill_rows if s["current"] < s["required"])
-        largest_gap_val = max([s["required"] - s["current"] for s in skill_rows], default=0)
-        largest_gap_skill = next((s for s in skill_rows if s["required"] - s["current"] == largest_gap_val), None)
-        largest_gap_info = {"name": largest_gap_skill["name"], "gap": max(0, largest_gap_val)} if largest_gap_skill and largest_gap_val > 0 else None
-
-        skill_summary = {
-            "overall": overall_score,
-            "strong_count": strong_count,
-            "improve_count": improve_count,
-            "largest_gap": largest_gap_info,
-        }
-
-        return Response({
-            "has_data": True,
-            "targetCareer": target_career,
-            "target_career": target_career,
-            "career_match": match_percent,
-            "careerMatch": match_percent,
-            "skills": skill_rows,
-            "skill_summary": skill_summary,
-            "summary": skill_summary,
-            "insight": insight,
-            "skill_insight": insight,
-        }, status=status.HTTP_200_OK)
+        if not user_id or not str(user_id).isdigit():
+            return Response({"detail": "A valid user_id is required."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(build_insights(int(user_id)), status=status.HTTP_200_OK)
 
 
 class StudentCareerReadinessView(APIView):
@@ -313,127 +202,9 @@ class StudentCareerReadinessView(APIView):
 
     def get(self, request):
         user_id = request.query_params.get("user_id")
-        if not user_id:
-            return Response({"detail": "user_id is required."}, status=status.HTTP_400_BAD_REQUEST)
-
-        top_rec = CareerRecommendation.objects.filter(user_id=user_id).order_by("-match_percent").first()
-        target_career = top_rec.career_name if top_rec else "Not selected"
-        match_percent = top_rec.match_percent if top_rec else 0
-
-        # Technical score is based on the student's recorded skills/recommendation.
-        tech_score = int(match_percent) if top_rec else 0
-
-        # Roadmap progress
-        stages = RoadmapStage.objects.filter(user_id=user_id)
-        if stages.exists():
-            completed_stages = stages.filter(status='completed').count()
-            current_stages = stages.filter(status='current').count()
-            learning_score = round((completed_stages / stages.count()) * 100)
-        else:
-            learning_score = 0
-
-        # Practical tasks experience
-        tasks = Task.objects.filter(user_id=user_id)
-        if tasks.exists():
-            completed_tasks = tasks.filter(status='Completed').count()
-            submitted_tasks = tasks.filter(status='Submitted').count()
-            practical_score = round(((completed_tasks + submitted_tasks) / tasks.count()) * 100)
-        else:
-            practical_score = 0
-
-        # Quiz knowledge assessment
-        attempts = QuizAttempt.objects.filter(user_id=user_id)
-        if attempts.exists():
-            knowledge_score = round(sum((a.score / a.total_questions) * 100 for a in attempts) / attempts.count())
-        else:
-            knowledge_score = 0
-
-        # Average only dimensions for which there is real evidence; empty dimensions are zero,
-        # so a recommendation by itself cannot imply learning or task completion.
-        overall = round((tech_score + learning_score + practical_score + knowledge_score) / 4)
-
-        level = "Job Ready" if overall >= 75 else ("Accelerating" if overall >= 60 else "Foundational")
-        level_note = f"You are demonstrating solid progress across key foundational competencies for {target_career}."
-        readiness_insight = f"Your career preparation for {target_career} is at {overall}%. Strengthening practical projects and quizzes will boost your hireability."
-
-        categories = [
-            {
-                "name": "Technical Skills",
-                "value": tech_score,
-                "icon": "bi-code-slash",
-                "color": "blue",
-                "description": f"Domain and technical skills matched for {target_career}",
-            },
-            {
-                "name": "Learning Progress",
-                "value": learning_score,
-                "icon": "bi-book",
-                "color": "purple",
-                "description": "Progress across your milestone career roadmap",
-            },
-            {
-                "name": "Practical Experience",
-                "value": practical_score,
-                "icon": "bi-kanban",
-                "color": "orange",
-                "description": "Completed courses, tasks and assignment submissions",
-            },
-            {
-                "name": "Knowledge Assessment",
-                "value": knowledge_score,
-                "icon": "bi-patch-question",
-                "color": "green",
-                "description": "Performance across multiple-choice quizzes and tests",
-            },
-        ]
-
-        strengths = [
-            "Strong foundation in core technical competencies",
-            "Active engagement with structured learning roadmap",
-            "Consistent quiz participation and self-evaluation",
-        ]
-
-        improvement_areas = [
-            {"name": "Advanced Practice Tasks", "progress": practical_score, "target": 85},
-            {"name": "Domain Quiz Mastery", "progress": knowledge_score, "target": 90},
-            {"name": "Milestone Roadmap Completion", "progress": learning_score, "target": 100},
-        ]
-
-        next_steps = [
-            f"Continue your next milestone stage in {target_career}",
-            f"Strengthen your highest skill gap through targeted practice tasks",
-            f"Schedule guidance or review with an industry professional",
-        ]
-
-        readiness_nested = {
-            "overall": overall,
-            "insight": readiness_insight,
-            "skill_progress": tech_score,
-            "roadmap_progress": learning_score,
-            "level": level,
-            "level_note": level_note,
-            "categories": categories,
-            "strengths": strengths,
-            "improvement_areas": improvement_areas,
-            "improvementAreas": improvement_areas,
-            "next_steps": next_steps,
-        }
-
-        data = {
-            "has_data": True,
-            "overall": overall,
-            "target_career": target_career,
-            "targetCareer": target_career,
-            "career_match": match_percent,
-            "careerMatch": match_percent,
-            "readiness": readiness_nested,
-            "categories": categories,
-            "strengths": strengths,
-            "improvementAreas": improvement_areas,
-            "improvement_areas": improvement_areas,
-            "next_steps": next_steps,
-        }
-        return Response(data, status=status.HTTP_200_OK)
+        if not user_id or not str(user_id).isdigit():
+            return Response({"detail": "A valid user_id is required."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(build_insights(int(user_id)), status=status.HTTP_200_OK)
 
 
 class StudentProgressView(APIView):
@@ -444,31 +215,36 @@ class StudentProgressView(APIView):
         if not user_id:
             return Response({"detail": "user_id is required."}, status=status.HTTP_400_BAD_REQUEST)
 
+        sync_roadmap_progress(user_id)
+
         stages = RoadmapStage.objects.filter(user_id=user_id).order_by('order')
         tasks = Task.objects.filter(user_id=user_id)
         quizzes = Quiz.objects.filter(user_id=user_id, status='approved')
         attempts = QuizAttempt.objects.filter(user_id=user_id).order_by('-completed_at')
 
         total_stages = stages.count()
-        completed_stages = stages.filter(status='completed').count()
+        roadmap_skills = list(RoadmapSkill.objects.filter(stage__user_id=user_id))
+        roadmap_progress = round(sum(s.progress for s in roadmap_skills) / len(roadmap_skills)) if roadmap_skills else 0
 
         total_tasks = tasks.count()
-        completed_tasks = tasks.filter(status='Completed').count()
+        completed_tasks = tasks.filter(status__in=['Completed', 'Submitted']).count()
 
         total_quizzes = quizzes.count()
-        completed_quiz_ids = set(attempts.values_list('quiz_id', flat=True))
-        quizzes_completed_count = len(completed_quiz_ids)
+        quizzes_completed_count = len(set(attempts.values_list('quiz_id', flat=True)))
 
         avg_score = 0
         if attempts.exists():
             avg_score = round(sum((a.score / a.total_questions) * 100 for a in attempts) / attempts.count())
 
-        # Achievements
+        assessment_done = has_taken_assessment(user_id)
+        insights = build_insights(int(user_id)) if assessment_done else {}
+        readiness_overall = insights.get("overall", 0)
+
         achievements = [
             {
                 "title": "Assessment Completed",
                 "description": "Completed common career assessment and received recommendations",
-                "achieved": True,
+                "achieved": assessment_done,
                 "icon": "bi-clipboard-check",
             },
             {
@@ -492,24 +268,26 @@ class StudentProgressView(APIView):
             {
                 "title": "Ready for Industry",
                 "description": "Reached above 75% career readiness score",
-                "achieved": avg_score >= 75 and completed_tasks >= 2,
+                "achieved": readiness_overall >= 75,
                 "icon": "bi-stars",
             },
         ]
 
-        recent_attempts = []
-        for att in attempts[:5]:
-            recent_attempts.append({
+        recent_attempts = [
+            {
                 "quizTitle": att.quiz.title,
                 "score": att.score,
                 "total": att.total_questions,
                 "percent": round((att.score / att.total_questions) * 100),
                 "date": att.completed_at.strftime("%d %b %Y"),
-            })
+            }
+            for att in attempts[:5]
+        ]
 
         return Response({
+            "assessmentCompleted": assessment_done,
             "metrics": {
-                "roadmapProgress": round((completed_stages / total_stages * 100)) if total_stages else 0,
+                "roadmapProgress": roadmap_progress,
                 "tasksCompleted": f"{completed_tasks} of {total_tasks}",
                 "taskPercent": round((completed_tasks / total_tasks * 100)) if total_tasks else 0,
                 "quizzesCompleted": f"{quizzes_completed_count} of {total_quizzes}",

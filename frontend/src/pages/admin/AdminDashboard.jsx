@@ -1,20 +1,24 @@
 import React, { useEffect, useState } from "react";
 import api from "../../services/api";
 import AdminLayout from "../../components/admin/AdminLayout";
-import "./AdminDashboard.css";
+import { Avatar, Badge, Card, EmptyState, Loading, PageHeader, Progress, StatCard, toneForStatus } from "../../components/ui/ui";
+import "./Admin.css";
 
-const defaultStats = [
-  { label: "Total Students", value: "1,248", change: "+12.5%", icon: "bi-people", type: "blue" },
-  { label: "Industry Experts", value: "86", change: "+8.2%", icon: "bi-person-badge", type: "purple" },
-  { label: "Active Quizzes", value: "64", change: "+5.4%", icon: "bi-book", type: "green" },
-  { label: "Assessments Completed", value: "3,842", change: "+18.7%", icon: "bi-clipboard-check", type: "orange" },
+const MODULES = [
+  { href: "/admin/students", icon: "bi-people", tone: "blue", title: "Manage Students", sub: "View, filter and activate accounts" },
+  { href: "/admin/experts", icon: "bi-person-badge", tone: "purple", title: "Verify Mentors", sub: "Approve mentor verification requests" },
+  { href: "/admin/careers", icon: "bi-diagram-3", tone: "green", title: "Careers & Skills", sub: "Configure career paths and skills" },
+  { href: "/admin/quizzes", icon: "bi-clipboard2-check", tone: "orange", title: "Quizzes & Assessments", sub: "Monitor questions and submissions" },
+  { href: "/admin/announcements", icon: "bi-megaphone", tone: "blue", title: "Announcements", sub: "Broadcast notices, handle complaints" },
+  { href: "/admin/reports", icon: "bi-bar-chart-line", tone: "teal", title: "Reports & Analytics", sub: "Performance and engagement" },
 ];
 
 const AdminDashboard = () => {
-  const user = JSON.parse(localStorage.getItem("user"));
-  const fullName = user ? `${user.first_name} ${user.last_name || ""}`.trim() : "Admin";
+  const user = JSON.parse(localStorage.getItem("user") || "null");
+  const firstName = user?.first_name || "Admin";
 
-  const [stats, setStats] = useState(defaultStats);
+  const [stats, setStats] = useState(null);
+  const [activity, setActivity] = useState([]);
   const [recentStudents, setRecentStudents] = useState([]);
   const [expertRequests, setExpertRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,15 +32,10 @@ const AdminDashboard = () => {
           api.get("admin-portal/experts/").catch(() => null),
         ]);
 
-        if (statsRes?.data?.stats) {
-          setStats(statsRes.data.stats);
-        }
-        if (studentsRes?.data) {
-          setRecentStudents(studentsRes.data.slice(0, 5));
-        }
-        if (expertsRes?.data) {
-          setExpertRequests(expertsRes.data.slice(0, 4));
-        }
+        if (statsRes?.data?.stats) setStats(statsRes.data.stats);
+        if (Array.isArray(statsRes?.data?.activity)) setActivity(statsRes.data.activity);
+        if (studentsRes?.data) setRecentStudents(studentsRes.data.slice(0, 5));
+        if (expertsRes?.data) setExpertRequests(expertsRes.data.slice(0, 5));
       } catch (err) {
         console.error("Failed to load admin stats:", err);
       } finally {
@@ -46,253 +45,135 @@ const AdminDashboard = () => {
     fetchData();
   }, []);
 
+  const peak = Math.max(1, ...activity.flatMap((d) => [d.signups, d.assessments]));
+  const hasActivity = activity.some((d) => d.signups > 0 || d.assessments > 0);
+  const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric", year: "numeric" });
+
   return (
     <AdminLayout activePage="dashboard" pageTitle="Dashboard">
-      <div className="admin-content">
-        {/* WELCOME */}
-        <section className="admin-welcome">
-          <div>
-            <span className="admin-section-label">ADMINISTRATION</span>
-            <h2>Welcome back, {fullName} 👋</h2>
-            <p>
-              Monitor real-time platform activity, verify industry mentors, oversee career paths, and manage students.
-            </p>
-          </div>
+      <main className="adm-page">
+        <PageHeader
+          eyebrow="Administration"
+          title={`Welcome back, ${firstName}`}
+          subtitle="Monitor platform activity, verify industry mentors, oversee career paths and manage students."
+          actions={<span className="cc-chip"><i className="bi bi-calendar3"></i> {today}</span>}
+        />
 
-          <div className="admin-date">
-            <i className="bi bi-calendar3"></i>
-            <span>{new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
-          </div>
-        </section>
-
-        {/* STATISTICS */}
-        <section className="admin-stats-grid">
-          {stats.map((stat) => (
-            <div className="admin-stat-card" key={stat.label}>
-              <div className={`admin-stat-icon ${stat.type}`}>
-                <i className={`bi ${stat.icon}`}></i>
-              </div>
-              <div className="admin-stat-content">
-                <span>{stat.label}</span>
-                <h3>{stat.value}</h3>
-                <small>
-                  <i className="bi bi-arrow-up"></i>
-                  {stat.change}
-                </small>
-              </div>
-            </div>
-          ))}
-        </section>
-
-        {/* MAIN GRID */}
-        <section className="admin-main-grid">
-          {/* USER ACTIVITY BARS */}
-          {/* <div className="admin-card admin-overview-card">
-            <div className="admin-card-header">
-              <div>
-                <span className="admin-section-label">PLATFORM OVERVIEW</span>
-                <h3>User & Assessment Activity</h3>
-              </div>
-              <select className="admin-period-select">
-                <option>Last 7 days</option>
-                <option>Last 30 days</option>
-              </select>
-            </div>
-
-            <div className="admin-chart-placeholder">
-              <div className="chart-y-axis">
-                <span>400</span>
-                <span>300</span>
-                <span>200</span>
-                <span>100</span>
-                <span>0</span>
-              </div>
-
-              <div className="chart-area">
-                <div className="chart-grid-line"></div>
-                <div className="chart-grid-line"></div>
-                <div className="chart-grid-line"></div>
-                <div className="chart-grid-line"></div>
-                <div className="chart-grid-line"></div>
-
-                <div className="chart-bars">
-                  <div style={{ height: "45%" }}><span>Mon</span></div>
-                  <div style={{ height: "62%" }}><span>Tue</span></div>
-                  <div style={{ height: "52%" }}><span>Wed</span></div>
-                  <div style={{ height: "76%" }}><span>Thu</span></div>
-                  <div style={{ height: "68%" }}><span>Fri</span></div>
-                  <div style={{ height: "88%" }}><span>Sat</span></div>
-                  <div style={{ height: "72%" }}><span>Sun</span></div>
-                </div>
-              </div>
-            </div>
-          </div> */}
-
-          {/* QUICK ACTIONS */}
-          <div className="admin-card">
-            <div className="admin-card-header">
-              <div>
-                <span className="admin-section-label">MANAGEMENT</span>
-                <h3>Quick Admin Modules</h3>
-              </div>
-            </div>
-
-            <div className="admin-actions">
-              <button onClick={() => (window.location.href = "/admin/students")}>
-                <div className="action-icon blue"><i className="bi bi-people"></i></div>
-                <div>
-                  <strong>Manage Students</strong>
-                  <span>View, filter and activate student accounts</span>
-                </div>
-                <i className="bi bi-arrow-right"></i>
-              </button>
-
-              <button onClick={() => (window.location.href = "/admin/experts")}>
-                <div className="action-icon purple"><i className="bi bi-person-badge"></i></div>
-                <div>
-                  <strong>Verify & Manage Mentors</strong>
-                  <span>Approve mentor verification requests</span>
-                </div>
-                <i className="bi bi-arrow-right"></i>
-              </button>
-
-              <button onClick={() => (window.location.href = "/admin/careers")}>
-                <div className="action-icon green"><i className="bi bi-diagram-3"></i></div>
-                <div>
-                  <strong>Careers & Skills Management</strong>
-                  <span>Configure career options & skill mappings</span>
-                </div>
-                <i className="bi bi-arrow-right"></i>
-              </button>
-
-              <button onClick={() => (window.location.href = "/admin/quizzes")}>
-                <div className="action-icon orange"><i className="bi bi-clipboard2-check"></i></div>
-                <div>
-                  <strong>Quizzes & Assessment Monitoring</strong>
-                  <span>Monitor test questions & submissions</span>
-                </div>
-                <i className="bi bi-arrow-right"></i>
-              </button>
-
-              <button onClick={() => (window.location.href = "/admin/announcements")}>
-                <div className="action-icon blue"><i className="bi bi-megaphone"></i></div>
-                <div>
-                  <strong>Announcements & Moderation</strong>
-                  <span>Broadcast notices & handle user complaints</span>
-                </div>
-                <i className="bi bi-arrow-right"></i>
-              </button>
-
-              <button onClick={() => (window.location.href = "/admin/reports")}>
-                <div className="action-icon orange"><i className="bi bi-bar-chart"></i></div>
-                <div>
-                  <strong>Platform Reports & Analytics</strong>
-                  <span>View performance and engagement trends</span>
-                </div>
-                <i className="bi bi-arrow-right"></i>
-              </button>
-            </div>
-          </div>
-        </section>
-
-        {/* LOWER GRID */}
-        <section className="admin-lower-grid">
-          {/* RECENT STUDENTS */}
-          <div className="admin-card">
-            <div className="admin-card-header">
-              <div>
-                <span className="admin-section-label">STUDENTS</span>
-                <h3>Registered Students</h3>
-              </div>
-              <button className="admin-view-button" onClick={() => (window.location.href = "/admin/students")}>
-                View All
-              </button>
-            </div>
-
-            <div className="admin-student-list">
-              {recentStudents.map((student) => (
-                <div className="admin-student-row" key={student.email || student.id}>
-                  <div className="admin-student-avatar">{student.name.charAt(0)}</div>
-
-                  <div className="admin-student-info">
-                    <strong>{student.name}</strong>
-                    <span>{student.email}</span>
-                  </div>
-
-                  <div className="admin-student-career">
-                    <span>Career Goal</span>
-                    <strong>{student.career}</strong>
-                  </div>
-
-                  <div className="admin-student-progress">
-                    <div>
-                      <span>Progress</span>
-                      <strong>{student.progress}%</strong>
-                    </div>
-                    <div className="mini-progress">
-                      <div style={{ width: `${student.progress}%` }}></div>
-                    </div>
-                  </div>
-
-                  <span className={`admin-active-status ${student.status?.toLowerCase() === "inactive" ? "inactive" : ""}`}>
-                    {student.status || "Active"}
-                  </span>
-                </div>
+        <div className="cc-grid cc-grid--4 adm-section">
+          {stats
+            ? stats.map((s) => (
+                <StatCard key={s.label} icon={s.icon} tone={s.type} label={s.label} value={s.value} hint={s.change} />
+              ))
+            : ["Total Students", "Industry Experts", "Active Quizzes", "Assessments Done"].map((label, i) => (
+                <StatCard key={label} icon={["bi-people", "bi-person-badge", "bi-book", "bi-clipboard-check"][i]} tone={["blue", "purple", "green", "orange"][i]} label={label} value={loading ? "…" : "—"} />
               ))}
-            </div>
-          </div>
+        </div>
 
-          {/* EXPERT REQUESTS */}
-          <div className="admin-card">
-            <div className="admin-card-header">
-              <div>
-                <span className="admin-section-label">INDUSTRY EXPERTS</span>
-                <h3>Mentor Verification Overview</h3>
+        <div className="adm-split">
+          <Card
+            title="Platform activity"
+            subtitle="New sign-ups and completed assessments, last 7 days"
+            action={
+              <div className="adm-legend">
+                <span><i style={{ background: "var(--cc-brand-600)" }}></i>Sign-ups</span>
+                <span><i style={{ background: "var(--cc-purple-600)" }}></i>Assessments</span>
               </div>
-              <button className="admin-view-button" onClick={() => (window.location.href = "/admin/experts")}>
-                View All
-              </button>
-            </div>
-
-            <div className="admin-request-list">
-              {expertRequests.map((request) => (
-                <div className="admin-request-row" key={request.email || request.id}>
-                  <div className="admin-request-avatar">{request.initials || request.name.charAt(0)}</div>
-
-                  <div className="admin-request-info">
-                    <strong>{request.name}</strong>
-                    <span>{request.role} • {request.company}</span>
-                    <small>{request.domain} • {request.joined}</small>
+            }
+          >
+            {loading ? (
+              <Loading label="Loading activity..." />
+            ) : !hasActivity ? (
+              <EmptyState icon="bi-bar-chart" title="No activity in the last 7 days">
+                Sign-ups and assessments will appear here as students use the platform.
+              </EmptyState>
+            ) : (
+              <div className="adm-bars">
+                {activity.map((d) => (
+                  <div className="adm-bars__col" key={d.day}>
+                    <div className="adm-bars__pair">
+                      <div className="adm-bars__bar" style={{ height: `${(d.signups / peak) * 100}%`, background: "var(--cc-brand-600)" }}>{d.signups > 0 && <b>{d.signups}</b>}</div>
+                      <div className="adm-bars__bar" style={{ height: `${(d.assessments / peak) * 100}%`, background: "var(--cc-purple-600)" }}>{d.assessments > 0 && <b>{d.assessments}</b>}</div>
+                    </div>
+                    <span className="adm-bars__day">{d.day}</span>
                   </div>
+                ))}
+              </div>
+            )}
+          </Card>
 
-                  <span className={`admin-request-status ${request.status?.toLowerCase() || "pending"}`}>
-                    {request.status || (request.verified ? "Approved" : "Pending")}
-                  </span>
-                </div>
+          <Card title="Quick modules" subtitle="Jump to a management area">
+            <nav className="adm-quick">
+              {MODULES.map((m) => (
+                <a key={m.href} href={m.href}>
+                  <div className={`cc-stat__icon cc-tone-${m.tone}`}><i className={`bi ${m.icon}`}></i></div>
+                  <div>
+                    <strong>{m.title}</strong>
+                    <span className="sub">{m.sub}</span>
+                  </div>
+                  <i className="bi bi-arrow-right"></i>
+                </a>
               ))}
-            </div>
-          </div>
-        </section>
+            </nav>
+          </Card>
+        </div>
 
-        {/* AI & PLATFORM SYSTEM CARD */}
-        {/* <section className="admin-ai-card">
-          <div className="admin-ai-icon">
-            <i className="bi bi-stars"></i>
-          </div>
-          <div className="admin-ai-content">
-            <span className="admin-section-label">AI PERSONALIZATION SYSTEM</span>
-            <h3>CareerCompass Recommendation Engine</h3>
-            <p>
-              AI-driven skill gap assessment, tailored roadmap milestones, and verified industry mentor pairings are active and operating seamlessly.
-            </p>
-          </div>
-          <div className="admin-ai-status">
-            <span className="ai-status-dot"></span>
-            <strong>Active & Healthy</strong>
-            <small>All Systems Normal</small>
-          </div>
-        </section> */}
-      </div>
+        <div className="adm-split adm-split--even">
+          <Card
+            flush
+            title="Registered students"
+            subtitle="Most recent accounts"
+            action={<a className="cc-btn cc-btn--soft cc-btn--sm" href="/admin/students">View all</a>}
+          >
+            {recentStudents.length === 0 ? (
+              <EmptyState icon="bi-people" title="No students yet">New student accounts will show up here.</EmptyState>
+            ) : (
+              <div className="adm-rows">
+                {recentStudents.map((st) => (
+                  <div className="adm-row" key={st.email || st.id}>
+                    <Avatar name={st.name} />
+                    <div className="adm-row__main">
+                      <strong>{st.name}</strong>
+                      <span>{st.career} • {st.email}</span>
+                    </div>
+                    <div className="adm-row__meter">
+                      <span>{st.progress}%</span>
+                      <Progress value={st.progress} />
+                    </div>
+                    <Badge tone={toneForStatus(st.status || "Active")} dot>{st.status || "Active"}</Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          <Card
+            flush
+            title="Mentor verification"
+            subtitle="Industry expert accounts"
+            action={<a className="cc-btn cc-btn--soft cc-btn--sm" href="/admin/experts">Review</a>}
+          >
+            {expertRequests.length === 0 ? (
+              <EmptyState icon="bi-person-badge" title="No mentors yet">Industry experts will be listed here.</EmptyState>
+            ) : (
+              <div className="adm-rows">
+                {expertRequests.map((ex) => {
+                  const st = ex.status || (ex.verified ? "Approved" : "Pending");
+                  return (
+                    <div className="adm-row" key={ex.email || ex.id}>
+                      <Avatar name={ex.name} />
+                      <div className="adm-row__main">
+                        <strong>{ex.name}</strong>
+                        <span>{ex.role} • {ex.company}</span>
+                      </div>
+                      <Badge tone={toneForStatus(st)} dot>{st}</Badge>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </Card>
+        </div>
+      </main>
     </AdminLayout>
   );
 };

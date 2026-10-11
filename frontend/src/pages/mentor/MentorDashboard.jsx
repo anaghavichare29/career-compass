@@ -85,7 +85,7 @@ const MentorDashboard = () => {
         api.get(`mentorship/requests/list/?user_id=${user.user_id}&role=mentor`).catch(() => ({ data: [] })),
         api.get(`mentorship/my-students/?mentor_user_id=${user.user_id}`).catch(() => ({ data: [] })),
         api.get(`tasks/submissions/?mentor_id=${user.user_id}`).catch(() => ({ data: [] })),
-        api.get(`quizzes/pending-review/`).catch(() => ({ data: [] })),
+        api.get(`quizzes/pending-review/?mentor_user_id=${user.user_id}`).catch(() => ({ data: [] })),
         api.get(`mentorship/resources/`).catch(() => ({ data: [] })),
       ]);
 
@@ -114,6 +114,33 @@ const MentorDashboard = () => {
 
   useEffect(() => {
     loadAllData();
+  }, []);
+
+  // Silent refresh of everything a mentor reviews, so new requests, task submissions and
+  // quizzes show up without reloading the page. It deliberately does not touch the
+  // profile form fields, so it can never overwrite something being edited.
+  const refreshInbox = async () => {
+    if (!user) return;
+    const [reqRes, stuRes, subRes, quizRes] = await Promise.all([
+      api.get(`mentorship/requests/list/?user_id=${user.user_id}&role=mentor`).catch(() => null),
+      api.get(`mentorship/my-students/?mentor_user_id=${user.user_id}`).catch(() => null),
+      api.get(`tasks/submissions/?mentor_id=${user.user_id}`).catch(() => null),
+      api.get(`quizzes/pending-review/?mentor_user_id=${user.user_id}`).catch(() => null),
+    ]);
+    if (reqRes) setRequests(reqRes.data || []);
+    if (stuRes) setStudents(stuRes.data || []);
+    if (subRes) setSubmissions(subRes.data || []);
+    if (quizRes) setPendingQuizzes(quizRes.data || []);
+  };
+
+  useEffect(() => {
+    const timer = setInterval(refreshInbox, 20000);
+    const onFocus = () => refreshInbox();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+    };
   }, []);
 
   const pendingRequestsCount = requests.filter((r) => r.status === "pending").length;
@@ -393,8 +420,8 @@ const MentorDashboard = () => {
               <div className="mentor-stat-card">
                 <div className="mentor-stat-icon green"><i className="bi bi-check2-square"></i></div>
                 <div>
-                  <span style={{ fontSize: "13px", color: "#64748b" }}>Task Submissions</span>
-                  <h3 style={{ margin: "4px 0", fontSize: "24px" }}>{submissions.length}</h3>
+                  <span style={{ fontSize: "13px", color: "#64748b" }}>Task Submissions to Review</span>
+                  <h3 style={{ margin: "4px 0", fontSize: "24px" }}>{pendingSubmissionsCount}</h3>
                   <small style={{ color: "#059669", cursor: "pointer", fontWeight: "600" }} onClick={() => setActiveTab("submissions")}>
                     Provide Feedback →
                   </small>
@@ -473,7 +500,7 @@ const MentorDashboard = () => {
                   >
                     <i className="bi bi-chat-left-dots" style={{ fontSize: "20px", color: "#10b981" }}></i>
                     <div>
-                      <strong>Review Student Submissions ({submissions.length})</strong>
+                      <strong>Review Student Submissions ({pendingSubmissionsCount} awaiting)</strong>
                       <div style={{ fontSize: "12px", color: "#64748b" }}>Provide constructive feedback on assignments</div>
                     </div>
                   </button>
@@ -507,7 +534,7 @@ const MentorDashboard = () => {
                   Students select you as their mentor. You can review their topic, goals, and approve or reject the request.
                 </p>
               </div>
-              <span className="mentor-badge" style={{ background: "#2f5bea" }}>{requests.length} Total</span>
+              <span className="mentor-badge" style={{ background: "#ffffff" }}>{requests.length} Total</span>
             </div>
 
             {requests.length === 0 ? (
@@ -597,7 +624,7 @@ const MentorDashboard = () => {
                   Analyze student learning curves, test performances, and career-readiness levels.
                 </p>
               </div>
-              <span className="mentor-badge" style={{ background: "#2f5bea" }}>{students.length} Students</span>
+              <span className="mentor-badge" style={{ background: "#ffffff" }}>{students.length} Students</span>
             </div>
 
             {students.length === 0 ? (
@@ -867,11 +894,20 @@ const MentorDashboard = () => {
                   Review work submitted by students, assess their approach, and deliver mentor feedback.
                 </p>
               </div>
-              <span className="mentor-badge" style={{ background: "#2f5bea" }}>{submissions.length} Submissions</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span className="mentor-badge" style={{ background: "#ffffff" }}>
+                  {pendingSubmissionsCount} awaiting • {submissions.length} total
+                </span>
+                <button type="button" className="mentor-action-btn outline" onClick={refreshInbox}>
+                  <i className="bi bi-arrow-clockwise"></i> Refresh
+                </button>
+              </div>
             </div>
 
             {submissions.length === 0 ? (
-              <p style={{ textAlign: "center", padding: "40px", color: "#64748b" }}>No task submissions awaiting review.</p>
+              <p style={{ textAlign: "center", padding: "40px", color: "#64748b" }}>
+                No submissions yet. Work submitted by the students you mentor will appear here.
+              </p>
             ) : (
               <div style={{ overflowX: "auto" }}>
                 <table className="mentor-table">
@@ -955,16 +991,21 @@ const MentorDashboard = () => {
               <div>
                 <h3>Student-Created Quizzes (Pending Review)</h3>
                 <p style={{ margin: "4px 0 0", fontSize: "13px", color: "#64748b" }}>
-                  Students can create quizzes for platform peers. Only upon your review & approval will they be posted.
+                  Quizzes created by the students you mentor. Review the questions and answer key, then approve or request changes.
                 </p>
               </div>
-              <span className="mentor-badge" style={{ background: "#2f5bea" }}>{pendingQuizzes.length} Pending</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span className="mentor-badge" style={{ background: "#ffffff" }}>{pendingQuizzes.length} Pending</span>
+                <button type="button" className="mentor-action-btn outline" onClick={refreshInbox}>
+                  <i className="bi bi-arrow-clockwise"></i> Refresh
+                </button>
+              </div>
             </div>
 
             {pendingQuizzes.length === 0 ? (
               <div style={{ textAlign: "center", padding: "40px", color: "#64748b" }}>
                 <i className="bi bi-check-circle-fill" style={{ fontSize: "2rem", color: "#10b981", display: "block", marginBottom: "8px" }}></i>
-                <p>All student quizzes have been reviewed! No pending submissions.</p>
+                <p>Nothing to review right now. Quizzes your students send to you will appear here.</p>
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -973,8 +1014,13 @@ const MentorDashboard = () => {
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "10px" }}>
                       <div>
                         <strong style={{ fontSize: "16px", color: "#0f172a" }}>{q.title}</strong>
+                        {q.student_name && (
+                          <div style={{ fontSize: "12.5px", color: "#475569", marginTop: "2px" }}>
+                            <i className="bi bi-person"></i> Created by <strong>{q.student_name}</strong>
+                          </div>
+                        )}
                         <div style={{ fontSize: "13px", color: "#64748b", margin: "2px 0" }}>
-                          Skill: <strong style={{ color: "#2f5bea" }}>{q.skill}</strong> • Difficulty: {q.difficulty} • Duration: {q.duration_minutes} mins
+                          Skill: <strong style={{ color: "#2f5bea" }}>{q.skill}</strong> • Difficulty: {q.difficulty} • Duration: {q.duration_minutes || 10} mins
                         </div>
                         {q.description && <p style={{ fontSize: "13px", color: "#475569", margin: "6px 0 0" }}>{q.description}</p>}
                       </div>

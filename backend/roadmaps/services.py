@@ -78,3 +78,58 @@ def generate_roadmap_for_user(user_id, career):
         else:
             stage.status = 'upcoming'
         stage.save()
+
+
+def sync_roadmap_progress(user_id):
+    """
+    Keeps the roadmap in step with the student's learning tasks.
+
+    A roadmap skill's progress is the average completion of the tasks for that
+    skill, and skill / stage statuses follow from it. Skills without any task
+    keep whatever progress they already have. Safe to call repeatedly.
+    """
+    from collections import defaultdict
+    from tasks.models import Task
+
+    stages = list(
+        RoadmapStage.objects.filter(user_id=user_id).order_by('order', 'id').prefetch_related('skills')
+    )
+    if not stages:
+        return
+
+    pct_by_skill = defaultdict(list)
+    for task in Task.objects.filter(user_id=user_id):
+        if task.skill:
+            pct_by_skill[task.skill.strip().lower()].append(task.percent)
+
+    ordered = [(stage, sk) for stage in stages for sk in sorted(stage.skills.all(), key=lambda x: x.id)]
+
+    for _, sk in ordered:
+        values = pct_by_skill.get(sk.name.strip().lower())
+        if values:
+            sk.progress = round(sum(values) / len(values))
+
+    # The first unfinished skill is always the "current" one; any skill the
+    # student has started is also in progress.
+    active = next((sk for _, sk in ordered if sk.progress < 100), None)
+    for _, sk in ordered:
+        if sk.progress >= 100:
+            sk.status = 'completed'
+        elif sk.progress > 0 or sk is active:
+            sk.status = 'current'
+        else:
+            sk.status = 'upcoming'
+
+    RoadmapSkill.objects.bulk_update([sk for _, sk in ordered], ['progress', 'status'])
+
+    for stage in stages:
+        statuses = [sk.status for sk in stage.skills.all()]
+        if statuses and all(x == 'completed' for x in statuses):
+            new_status = 'completed'
+        elif 'current' in statuses:
+            new_status = 'current'
+        else:
+            new_status = 'upcoming'
+        if stage.status != new_status:
+            stage.status = new_status
+            stage.save(update_fields=['status'])

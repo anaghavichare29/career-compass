@@ -40,13 +40,17 @@ def _generate_default_tasks_for_user(user_id):
 
 
 def _recalculate_user_progress(user_id):
-    tasks = Task.objects.filter(user_id=user_id)
-    completed_count = tasks.filter(status='Completed').count()
-    skill_percent = round((completed_count / tasks.count()) * 100) if tasks.exists() else 0
+    """Called after any task change: refresh the summary AND the roadmap."""
+    from roadmaps.services import sync_roadmap_progress
+
+    tasks = list(Task.objects.filter(user_id=user_id))
+    skill_percent = round(sum(t.percent for t in tasks) / len(tasks)) if tasks else 0
 
     summary, _ = ProgressSummary.objects.get_or_create(user_id=user_id)
     summary.skill_progress_percent = skill_percent
     summary.save(update_fields=['skill_progress_percent'])
+
+    sync_roadmap_progress(user_id)
 
 
 class TaskListView(ListAPIView):
@@ -96,7 +100,8 @@ class TaskProgressUpdateView(APIView):
 
 
 class TaskSubmitAssignmentView(APIView):
-    """POST /api/tasks/<id>/submit-assignment/  body: { user_id, submission_notes, submission_file }"""
+    """POST /api/tasks/<id>/submit-assignment/  body: { user_id, submission_notes, submission_file }
+    At least one of notes / file link is required."""
 
     def post(self, request, pk):
         try:
@@ -104,8 +109,13 @@ class TaskSubmitAssignmentView(APIView):
         except Task.DoesNotExist:
             return Response({"detail": "Task not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        notes = request.data.get('submission_notes', '')
-        file_url = request.data.get('submission_file', '')
+        notes = (request.data.get('submission_notes') or '').strip()
+        file_url = (request.data.get('submission_file') or '').strip()
+        if not notes and not file_url:
+            return Response(
+                {"detail": "Add a project link or a few notes before submitting."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         task.submission_notes = notes
         task.submission_file = file_url
@@ -116,23 +126,31 @@ class TaskSubmitAssignmentView(APIView):
 
         _recalculate_user_progress(task.user_id)
 
-        # Notify
-        try:
-            from django.db import connection
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    "INSERT INTO notifications (user_id, title, message, type) VALUES (%s, %s, %s, %s)",
-                    [
-                        task.user_id,
-                        f"Assignment Submitted: {task.title}",
-                        f"You successfully submitted your work for {task.course_name or task.title}. It has been sent for mentor feedback.",
-                        "task",
-                    ]
-                )
-        except Exception:
-            pass
+        from mentorship.services import notify, notify_student_mentors
+        from accounts.models import User
+        student = User.objects.filter(user_id=task.user_id).first()
+        student_name = f"{student.first_name} {student.last_name or ''}".strip() if student else f"Student #{task.user_id}"
+        mentors_notified = notify_student_mentors(
+            task.user_id,
+            f"New task submission: {task.title}",
+            f"{student_name} submitted work for \"{task.title}\" and is waiting for your review.",
+            "task",
+        )
+        notify(
+            task.user_id,
+            f"Assignment Submitted: {task.title}",
+            (
+                f"You submitted your work for {task.course_name or task.title}. "
+                + ("It has been sent to your mentor for feedback."
+                   if mentors_notified else
+                   "You are not connected with a mentor yet; it will appear for a mentor once they accept your guidance request.")
+            ),
+            "task",
+        )
 
-        return Response(TaskSerializer(task).data, status=status.HTTP_200_OK)
+        data = dict(TaskSerializer(task).data)
+        data["mentors_notified"] = mentors_notified
+        return Response(data, status=status.HTTP_200_OK)
 
 
 class TaskMentorFeedbackView(APIView):
@@ -174,22 +192,34 @@ class TaskMentorFeedbackView(APIView):
 
 
 class TaskSubmissionsListView(APIView):
-    """GET /api/tasks/submissions/?mentor_id=X - Returns student task submissions for review"""
+    """
+    GET /api/tasks/submissions/?mentor_id=<mentor user id>
+
+    Submitted work from the mentor's students (students who sent them a guidance
+    request that was not rejected), plus any task the mentor assigned themselves.
+    Work still awaiting review is listed first.
+    """
 
     def get(self, request):
         mentor_id = request.query_params.get('mentor_id')
-        tasks = Task.objects.filter(submission_notes__isnull=False).exclude(submission_notes='').order_by('-submitted_at')
-        if mentor_id:
-            from mentorship.models import ProfessionalProfile
-            # include tasks assigned by this mentor or generally submitted tasks
-            mentor_tasks = tasks.filter(mentor_id=mentor_id)
-            if mentor_tasks.exists():
-                tasks = mentor_tasks
+        if not mentor_id or not str(mentor_id).isdigit():
+            return Response([], status=status.HTTP_200_OK)
 
+        from django.db.models import Q
         from accounts.models import User
+        from mentorship.services import student_ids_for_mentor
+
+        student_ids = student_ids_for_mentor(int(mentor_id))
+        submitted = Q(submitted_at__isnull=False) | Q(status__in=['Submitted', 'Needs Revision']) | ~Q(submission_notes='') | ~Q(submission_file='')
+        mine = Q(user_id__in=student_ids) | Q(mentor_id=int(mentor_id))
+        tasks = list(Task.objects.filter(submitted & mine).distinct())
+
+        tasks.sort(key=lambda t: (t.status != 'Submitted', -(t.submitted_at.timestamp() if t.submitted_at else 0)))
+
+        users = {u.user_id: u for u in User.objects.filter(user_id__in={t.user_id for t in tasks})}
         results = []
         for t in tasks:
-            student = User.objects.filter(user_id=t.user_id).first()
+            student = users.get(t.user_id)
             results.append({
                 "id": t.id,
                 "userId": t.user_id,
@@ -199,6 +229,7 @@ class TaskSubmissionsListView(APIView):
                 "skill": t.skill,
                 "courseName": t.course_name,
                 "status": t.status,
+                "awaitingReview": t.status == 'Submitted',
                 "submissionNotes": t.submission_notes,
                 "submissionFile": t.submission_file,
                 "mentorFeedback": t.mentor_feedback,

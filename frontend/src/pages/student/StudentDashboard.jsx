@@ -72,9 +72,11 @@ const StudentDashboard = () => {
   const tasksCompletedPercent =
     tasks.length > 0 ? Math.round((completedTaskCount / tasks.length) * 100) : 0;
 
-  const completedRoadmapCount = roadmap.filter((r) => r.status === "completed").length;
+  const roadmapSkills = roadmap.flatMap((stage) => stage.skills || []);
   const roadmapPercent =
-    roadmap.length > 0 ? Math.round((completedRoadmapCount / roadmap.length) * 100) : 0;
+    roadmapSkills.length > 0
+      ? Math.round(roadmapSkills.reduce((sum, sk) => sum + sk.progress, 0) / roadmapSkills.length)
+      : 0;
 
   const skillPercent = progressSummary.skill_progress_percent;
   const quizPercent = progressSummary.quiz_progress_percent;

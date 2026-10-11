@@ -88,7 +88,7 @@ const MentorSidebar = ({
         <h2>
           Career<span>Compass</span>
         </h2>
-        <span className="mentor-badge-pill">MENTOR</span>
+        {/* <span className="mentor-badge-pill">MENTOR</span> */}
       </div>
 
       {/* Navigation */}

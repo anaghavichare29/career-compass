@@ -1,7 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import api from "../../services/api";
 import AdminLayout from "../../components/admin/AdminLayout";
-import "./AdminStudents.css";
+import {
+  Alert, Avatar, Badge, Card, EmptyState, Field, Loading, Modal, PageHeader, Progress, SearchInput, StatCard, toneForStatus,
+} from "../../components/ui/ui";
+import "./Admin.css";
 
 const AdminStudents = () => {
   const [students, setStudents] = useState([]);
@@ -174,561 +177,194 @@ const AdminStudents = () => {
 
   return (
     <AdminLayout activePage="students" pageTitle="Students">
-      <main className="admin-students-content">
-        <button
-          className="admin-back-button"
-          type="button"
-          onClick={() => (window.location.href = "/admin/dashboard")}
-        >
-          <i className="bi bi-arrow-left"></i> Back to Dashboard
-        </button>
-
-        {/* PAGE HEADING */}
-        <section className="admin-page-heading">
-          <div>
-            <span className="admin-section-label">STUDENT MANAGEMENT</span>
-            <h2>Manage Students</h2>
-            <p>
-              View registered students, monitor learning progress, toggle
-              account status, and oversee career readiness.
-            </p>
-          </div>
-
-          <button
-            className="admin-primary-button"
-            type="button"
-            onClick={() => setShowAddModal(true)}
-          >
+      <main className="adm-page">
+      <PageHeader
+        eyebrow="People"
+        title="Student Management"
+        subtitle="View registered students, track their progress and manage account access."
+        actions={
+          <button className="cc-btn cc-btn--primary" onClick={() => setShowAddModal(true)}>
             <i className="bi bi-person-plus"></i> Add Student
           </button>
-        </section>
+        }
+      />
 
-        {/* STATISTICS */}
-        <section className="student-admin-stats">
-          <div className="student-admin-stat">
-            <div className="student-admin-stat-icon blue">
-              <i className="bi bi-people"></i>
-            </div>
-            <div>
-              <span>Total Students</span>
-              <h3>{students.length}</h3>
-              <small>Registered Accounts</small>
-            </div>
-          </div>
+      <div className="cc-grid cc-grid--4 adm-section">
+        <StatCard icon="bi-people" tone="blue" label="Total Students" value={students.length} hint="Registered accounts" />
+        <StatCard icon="bi-person-check" tone="green" label="Active Students" value={activeStudents} hint="Currently active" />
+        <StatCard icon="bi-clipboard-check" tone="orange" label="Assessments Done" value={completedAssessments} hint="Completed assessments" />
+        <StatCard icon="bi-graph-up" tone="purple" label="Avg. Progress" value={`${averageProgress}%`} hint="Across all students" />
+      </div>
 
-          <div className="student-admin-stat">
-            <div className="student-admin-stat-icon green">
-              <i className="bi bi-person-check"></i>
-            </div>
-            <div>
-              <span>Active Students</span>
-              <h3>{activeStudents}</h3>
-              <small>Currently Active</small>
-            </div>
-          </div>
-
-          <div className="student-admin-stat">
-            <div className="student-admin-stat-icon orange">
-              <i className="bi bi-clipboard-check"></i>
-            </div>
-            <div>
-              <span>Assessments Done</span>
-              <h3>{completedAssessments}</h3>
-              <small>Completed Assessments</small>
-            </div>
-          </div>
-
-          <div className="student-admin-stat">
-            <div className="student-admin-stat-icon purple">
-              <i className="bi bi-graph-up"></i>
-            </div>
-            <div>
-              <span>Avg Progress</span>
-              <h3>{averageProgress}%</h3>
-              <small>Platform Learning Curve</small>
-            </div>
-          </div>
-        </section>
-
-        {/* CONTROLS */}
-        <section className="admin-controls">
-          <div className="admin-search-box">
-            <i className="bi bi-search"></i>
-            <input
-              type="text"
-              placeholder="Search by student name, email, or career goal..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-
-          <div className="admin-filter-group">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
+      <Card
+        flush
+        title={`Registered Students (${filteredStudents.length})`}
+        action={
+          <div className="cc-toolbar">
+            <SearchInput value={searchTerm} onChange={setSearchTerm} placeholder="Search name, email or career..." />
+            <select className="cc-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <option>All Status</option>
               <option>Active</option>
               <option>Inactive</option>
             </select>
-
-            <select
-              value={domainFilter}
-              onChange={(e) => setDomainFilter(e.target.value)}
-            >
+            <select className="cc-select" value={domainFilter} onChange={(e) => setDomainFilter(e.target.value)}>
               {domains.map((d) => (
                 <option key={d}>{d}</option>
               ))}
             </select>
           </div>
-        </section>
-
-        {/* TABLE */}
-        <section className="admin-table-card">
-          <div className="admin-table-header">
-            <h3>Registered Students ({filteredStudents.length})</h3>
-          </div>
-
-          {loading ? (
-            <div
-              style={{ textAlign: "center", padding: "40px", color: "#64748b" }}
-            >
-              <i
-                className="bi bi-arrow-repeat"
-                style={{ fontSize: "24px" }}
-              ></i>
-              <p>Loading registered students...</p>
-            </div>
-          ) : filteredStudents.length === 0 ? (
-            <div
-              style={{ textAlign: "center", padding: "40px", color: "#64748b" }}
-            >
-              <p>No students found matching your filters.</p>
-            </div>
-          ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table className="admin-table">
-                <thead>
-                  <tr>
-                    <th>Student</th>
-                    <th>College / Course</th>
-                    <th>Target Career</th>
-                    <th>Assessment</th>
-                    <th>Progress</th>
-                    <th>Readiness</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredStudents.map((st) => (
-                    <tr key={st.id}>
-                      <td>
-                        <div className="admin-user-cell">
-                          <div className="admin-table-avatar">
-                            {st.name.charAt(0)}
-                          </div>
-                          <div>
-                            <strong>{st.name}</strong>
-                          </div>
+        }
+      >
+        {loading ? (
+          <Loading label="Loading registered students..." />
+        ) : filteredStudents.length === 0 ? (
+          <EmptyState icon="bi-people" title="No students found">
+            No students match your search or filters.
+          </EmptyState>
+        ) : (
+          <div className="cc-table-wrap">
+            <table className="cc-table">
+              <thead>
+                <tr>
+                  <th>Student</th>
+                  <th>College / Course</th>
+                  <th>Target Career</th>
+                  <th>Assessment</th>
+                  <th style={{ minWidth: 150 }}>Progress</th>
+                  <th>Readiness</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredStudents.map((st) => (
+                  <tr key={st.id}>
+                    <td>
+                      <div className="cc-user-cell">
+                        <Avatar name={st.name} />
+                        <div>
+                          <strong>{st.name}</strong>
                           <small>{st.email}</small>
                         </div>
-                      </td>
-                      <td>
-                        <div style={{ fontSize: "13px" }}>{st.college}</div>
-                        <small style={{ color: "#64748b" }}>
-                          {st.course} • {st.year}
-                        </small>
-                      </td>
-                      <td>
-                        <span style={{ fontWeight: "600", color: "#2f5bea" }}>
-                          {st.career}
-                        </span>
-                      </td>
-                      <td>
-                        <span
-                          className={`admin-status-pill ${st.assessment === "Completed" ? "success" : "pending"}`}
-                        >
-                          {st.assessment}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="table-progress">
-                          <span>{st.progress}%</span>
-                          <div className="progress-track">
-                            <div style={{ width: `${st.progress}%` }}></div>
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <span
-                          style={{
-                            fontWeight: "700",
-                            color: st.readiness >= 70 ? "#10b981" : "#f59e0b",
-                          }}
-                        >
-                          {st.readiness}%
-                        </span>
-                      </td>
-                      <td>
-                        <span
-                          className={`admin-status-pill ${st.status === "Active" ? "active" : "inactive"}`}
-                        >
-                          {st.status}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="table-actions">
-                          <button
-                            className="table-action-button view"
-                            onClick={() => handleViewStudent(st)}
-                          >
-                            <i className="bi bi-eye" aria-hidden="true"></i>
-                            <span>View Details</span>
-                          </button>
-                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div>{st.college}</div>
+                      <small className="cc-muted">{st.course} • {st.year}</small>
+                    </td>
+                    <td><span className="adm-career">{st.career}</span></td>
+                    <td>
+                      <Badge tone={st.assessment === "Completed" ? "green" : "orange"} dot>{st.assessment}</Badge>
+                    </td>
+                    <td>
+                      <div className="adm-progress-cell">
+                        <Progress value={st.progress} />
+                        <span>{st.progress}%</span>
+                      </div>
+                    </td>
+                    <td>
+                      <strong className={st.readiness >= 70 ? "adm-good" : "adm-warn"}>{st.readiness}%</strong>
+                    </td>
+                    <td><Badge tone={toneForStatus(st.status)} dot>{st.status}</Badge></td>
+                    <td>
+                      <div className="cc-actions">
+                        <button className="cc-btn cc-btn--secondary cc-btn--icon" title="View details" onClick={() => handleViewStudent(st)}>
+                          <i className="bi bi-eye"></i>
+                        </button>
                         <button
-                          className={`table-action-button ${st.status === "Active" ? "deactivate" : "activate"}`}
+                          className={`cc-btn cc-btn--icon ${st.status === "Active" ? "cc-btn--danger-soft" : "cc-btn--success-soft"}`}
+                          title={st.status === "Active" ? "Deactivate account" : "Activate account"}
                           onClick={() => handleToggleStatus(st)}
                         >
-                          <i
-                            className={`bi ${st.status === "Active" ? "bi-person-x" : "bi-person-check"}`}
-                            aria-hidden="true"
-                          ></i>
-                          <span>
-                            {st.status === "Active" ? "Deactivate" : "Activate"}
-                          </span>
+                          <i className={`bi ${st.status === "Active" ? "bi-person-x" : "bi-person-check"}`}></i>
                         </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-      </main>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
 
-      {/* STUDENT DETAIL MODAL */}
       {selectedStudent && (
-        <div
-          className="student-modal-overlay"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setSelectedStudent(null);
-          }}
-        >
-          <div
-            className="student-modal student-detail-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="student-detail-title"
-            style={{ maxWidth: "680px" }}
-          >
-            <div className="student-modal-header">
-              <div className="modal-profile">
-                <div className="modal-avatar">
-                  {selectedStudent.name.charAt(0)}
-                </div>
-                <div>
-                  <h3 id="student-detail-title">{selectedStudent.name}</h3>
-                  <span>
-                    {selectedStudent.email} • ID #{selectedStudent.id}
-                  </span>
-                </div>
-              </div>
+        <Modal
+          size="lg"
+          title={selectedStudent.name}
+          subtitle={`${selectedStudent.email} • ID #${selectedStudent.id}`}
+          onClose={() => setSelectedStudent(null)}
+          footer={
+            <>
+              <button className="cc-btn cc-btn--secondary" onClick={() => setSelectedStudent(null)}>Close</button>
               <button
-                className="modal-close"
-                onClick={() => setSelectedStudent(null)}
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="student-modal-grid">
-              <div>
-                <span>College / University</span>
-                <strong>{selectedStudent.college}</strong>
-              </div>
-              <div>
-                <span>Degree & Year</span>
-                <strong>
-                  {selectedStudent.course} ({selectedStudent.year})
-                </strong>
-              </div>
-              <div>
-                <span>Academic Score / GPA</span>
-                <strong>{selectedStudent.academicScore || "8.5"}</strong>
-              </div>
-              <div>
-                <span>Career Target</span>
-                <strong style={{ color: "#2f5bea" }}>
-                  {selectedStudent.career}
-                </strong>
-              </div>
-              <div>
-                <span>Assessment Status</span>
-                <strong>{selectedStudent.assessment}</strong>
-              </div>
-              <div>
-                <span>Career Readiness</span>
-                <strong style={{ color: "#10b981" }}>
-                  {selectedStudent.readiness}%
-                </strong>
-              </div>
-            </div>
-
-            {studentDetails && (
-              <div
-                style={{
-                  marginTop: "16px",
-                  padding: "14px",
-                  background: "#f8fafc",
-                  borderRadius: "10px",
-                  border: "1px solid #e2e8f0",
-                }}
-              >
-                <strong
-                  style={{
-                    display: "block",
-                    color: "#1e293b",
-                    marginBottom: "8px",
-                    fontSize: "14px",
-                  }}
-                >
-                  Milestones & Tasks Breakdown ({studentDetails.tasks?.length}{" "}
-                  Tasks)
-                </strong>
-                <div
-                  style={{
-                    maxHeight: "150px",
-                    overflowY: "auto",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "6px",
-                  }}
-                >
-                  {studentDetails.tasks?.map((t) => (
-                    <div
-                      key={t.id}
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        fontSize: "12px",
-                        background: "#ffffff",
-                        padding: "6px 10px",
-                        borderRadius: "6px",
-                      }}
-                    >
-                      <span>{t.title}</span>
-                      <strong
-                        style={{
-                          color:
-                            t.status === "Completed" ? "#10b981" : "#f59e0b",
-                        }}
-                      >
-                        {t.status}
-                      </strong>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div
-              className="student-modal-actions"
-              style={{ marginTop: "20px" }}
-            >
-              <button
-                className="student-modal-secondary"
-                type="button"
-                onClick={() => setSelectedStudent(null)}
-              >
-                Close
-              </button>
-              <button
-                className={`student-modal-danger ${selectedStudent.status === "Active" ? "" : "activate"}`}
-                type="button"
+                className={`cc-btn ${selectedStudent.status === "Active" ? "cc-btn--danger" : "cc-btn--success"}`}
                 onClick={() => handleToggleStatus(selectedStudent)}
               >
-                {selectedStudent.status === "Active"
-                  ? "Deactivate Account"
-                  : "Activate Account"}
+                {selectedStudent.status === "Active" ? "Deactivate Account" : "Activate Account"}
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ADD STUDENT MODAL */}
-      {showAddModal && (
-        <div
-          className="student-modal-overlay"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setShowAddModal(false);
-          }}
+            </>
+          }
         >
-          <div
-            className="student-modal student-add-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="add-student-title"
-            style={{ maxWidth: "480px" }}
-          >
-            <div className="student-modal-header">
-              <h3 id="add-student-title">Create Student Account</h3>
-              <button
-                className="modal-close"
-                onClick={() => setShowAddModal(false)}
-              >
-                ✕
-              </button>
-            </div>
-
-            {addError && (
-              <div
-                style={{
-                  padding: "10px",
-                  background: "#fee2e2",
-                  color: "#b91c1c",
-                  borderRadius: "8px",
-                  marginBottom: "12px",
-                  fontSize: "13px",
-                }}
-              >
-                {addError}
-              </div>
-            )}
-
-            <form
-              onSubmit={handleAddStudent}
-              style={{ display: "flex", flexDirection: "column", gap: "12px" }}
-            >
-              <div>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "13px",
-                    fontWeight: "600",
-                    marginBottom: "4px",
-                  }}
-                >
-                  First Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={newFirstName}
-                  onChange={(e) => setNewFirstName(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "10px",
-                    borderRadius: "8px",
-                    border: "1px solid #cbd5e1",
-                  }}
-                />
-              </div>
-
-              <div>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "13px",
-                    fontWeight: "600",
-                    marginBottom: "4px",
-                  }}
-                >
-                  Last Name
-                </label>
-                <input
-                  type="text"
-                  value={newLastName}
-                  onChange={(e) => setNewLastName(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "10px",
-                    borderRadius: "8px",
-                    border: "1px solid #cbd5e1",
-                  }}
-                />
-              </div>
-
-              <div>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "13px",
-                    fontWeight: "600",
-                    marginBottom: "4px",
-                  }}
-                >
-                  Email *
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={newEmail}
-                  onChange={(e) => setNewEmail(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "10px",
-                    borderRadius: "8px",
-                    border: "1px solid #cbd5e1",
-                  }}
-                />
-              </div>
-
-              <div>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "13px",
-                    fontWeight: "600",
-                    marginBottom: "4px",
-                  }}
-                >
-                  Password *
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "10px",
-                    borderRadius: "8px",
-                    border: "1px solid #cbd5e1",
-                  }}
-                />
-              </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  gap: "8px",
-                  marginTop: "8px",
-                }}
-              >
-                <button
-                  type="button"
-                  className="student-modal-secondary"
-                  onClick={() => setShowAddModal(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={addLoading}
-                  className="admin-primary-button"
-                >
-                  {addLoading ? "Creating..." : "Create Student"}
-                </button>
-              </div>
-            </form>
+          <div className="adm-detail-grid">
+            <div><span>College / University</span><strong>{selectedStudent.college}</strong></div>
+            <div><span>Degree & Year</span><strong>{selectedStudent.course} ({selectedStudent.year})</strong></div>
+            <div><span>Academic Score / GPA</span><strong>{selectedStudent.academicScore || "8.5"}</strong></div>
+            <div><span>Career Target</span><strong className="adm-career">{selectedStudent.career}</strong></div>
+            <div><span>Assessment Status</span><strong>{selectedStudent.assessment}</strong></div>
+            <div><span>Career Readiness</span><strong className="adm-good">{selectedStudent.readiness}%</strong></div>
           </div>
-        </div>
+
+          {studentDetails && (
+            <div className="adm-tasklist">
+              <h4>Milestones & Tasks ({studentDetails.tasks?.length || 0})</h4>
+              {studentDetails.tasks?.length ? (
+                studentDetails.tasks.map((t) => (
+                  <div key={t.id} className="adm-taskrow">
+                    <span>{t.title}</span>
+                    <Badge tone={toneForStatus(t.status)}>{t.status}</Badge>
+                  </div>
+                ))
+              ) : (
+                <p className="cc-muted cc-text-sm">No tasks assigned yet.</p>
+              )}
+            </div>
+          )}
+        </Modal>
       )}
+
+      {showAddModal && (
+        <Modal
+          title="Create Student Account"
+          subtitle="The student can sign in immediately with these credentials."
+          onClose={() => setShowAddModal(false)}
+          footer={
+            <>
+              <button type="button" className="cc-btn cc-btn--secondary" onClick={() => setShowAddModal(false)}>Cancel</button>
+              <button type="submit" form="add-student-form" className="cc-btn cc-btn--primary" disabled={addLoading}>
+                {addLoading ? "Creating..." : "Create Student"}
+              </button>
+            </>
+          }
+        >
+          {addError && <Alert tone="error">{addError}</Alert>}
+          <form id="add-student-form" onSubmit={handleAddStudent} className="cc-form-grid adm-form">
+            <Field label="First name *">
+              <input className="cc-input" required value={newFirstName} onChange={(e) => setNewFirstName(e.target.value)} />
+            </Field>
+            <Field label="Last name">
+              <input className="cc-input" value={newLastName} onChange={(e) => setNewLastName(e.target.value)} />
+            </Field>
+            <Field label="Email *" span2>
+              <input className="cc-input" type="email" required value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
+            </Field>
+            <Field label="Password *" span2>
+              <input className="cc-input" type="password" required value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+            </Field>
+          </form>
+        </Modal>
+      )}
+      </main>
     </AdminLayout>
   );
 };

@@ -13,6 +13,9 @@ from .question_bank import QUESTION_BANK, GENERIC_TEMPLATES
 
 NUM_QUESTIONS_PER_QUIZ = 10
 
+# How long the request may wait for Gemini before using the offline question bank.
+GEMINI_TIMEOUT_SECONDS = 12
+
 _client = None
 
 SKILL_ALIASES = {
@@ -98,10 +101,12 @@ Rules:
 - Questions must be clear, factually correct, and specific to "{skill}".
 """
 
+    # NOTE: do not use `with ThreadPoolExecutor(...)` here. Its __exit__ waits for the
+    # worker thread, which would make the timeout below useless when Gemini is slow.
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
     try:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(_fetch_gemini_response, client, prompt)
-            text = future.result(timeout=4.0)
+        future = executor.submit(_fetch_gemini_response, client, prompt)
+        text = future.result(timeout=GEMINI_TIMEOUT_SECONDS)
 
         if not text:
             return None
@@ -115,11 +120,15 @@ Rules:
 
         questions = json.loads(text)
 
-        # Basic validation
         valid_questions = []
         for q in questions:
-            if all(k in q for k in ("question", "options", "correct_index")) and len(q["options"]) == 4:
-                valid_questions.append(q)
+            try:
+                options = q["options"]
+                correct = int(q["correct_index"])
+                if q["question"] and len(options) == 4 and 0 <= correct < 4:
+                    valid_questions.append({"question": q["question"], "options": options, "correct_index": correct})
+            except (KeyError, TypeError, ValueError):
+                continue
 
         if len(valid_questions) >= NUM_QUESTIONS_PER_QUIZ:
             return valid_questions[:NUM_QUESTIONS_PER_QUIZ]
@@ -129,6 +138,8 @@ Rules:
     except Exception as e:
         print(f"Gemini quiz generation failed/busy, falling back to backup question bank: {e}")
         return None
+    finally:
+        executor.shutdown(wait=False)
 
 
 def _build_question_pool_offline(skill):

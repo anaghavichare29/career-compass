@@ -67,7 +67,7 @@ const AdminSidebar = ({ activePage = "dashboard" }) => {
         <h2>
           Career<span>Compass</span>
         </h2>
-        <span className="admin-badge-pill">ADMIN</span>
+        {/* <span className="admin-badge-pill">ADMIN</span> */}
       </div>
 
       {/* Navigation */}

@@ -69,7 +69,7 @@ const StudentProgress = () => {
             <div>
               <span>Roadmap Progress</span>
               <h2>{metrics.roadmapProgress}%</h2>
-              <small>Stages completed</small>
+              <small>Average across roadmap skills</small>
             </div>
           </div>
 

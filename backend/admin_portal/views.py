@@ -11,6 +11,7 @@ from careers.models import CareerDefinition
 from quizzes.models import Quiz, QuizQuestion, QuizAttempt
 from tasks.models import Task
 from progress.models import ProgressSummary
+from . import metrics
 
 
 class AdminStatsView(APIView):
@@ -54,15 +55,17 @@ class AdminStatsView(APIView):
                 for r in cursor.fetchall()
             ]
 
+        hints = metrics.stat_hints(pending_experts)
         stats = [
-            {"label": "Total Students", "value": f"{total_students:,}", "change": "+14.2%", "icon": "bi-people", "type": "blue"},
-            {"label": "Industry Experts", "value": f"{total_experts:,}", "change": f"{pending_experts} Pending", "icon": "bi-person-badge", "type": "purple"},
-            {"label": "Active Quizzes", "value": f"{total_quizzes:,}", "change": "+8.4%", "icon": "bi-book", "type": "green"},
-            {"label": "Assessments Done", "value": f"{assessments_completed:,}", "change": "+18.7%", "icon": "bi-clipboard-check", "type": "orange"},
+            {"label": "Total Students", "value": f"{total_students:,}", "change": hints["students"], "icon": "bi-people", "type": "blue"},
+            {"label": "Industry Experts", "value": f"{total_experts:,}", "change": hints["experts"], "icon": "bi-person-badge", "type": "purple"},
+            {"label": "Active Quizzes", "value": f"{total_quizzes:,}", "change": hints["quizzes"], "icon": "bi-book", "type": "green"},
+            {"label": "Assessments Done", "value": f"{assessments_completed:,}", "change": hints["assessments"], "icon": "bi-clipboard-check", "type": "orange"},
         ]
 
         return Response({
             "stats": stats,
+            "activity": metrics.weekly_activity(),
             "totalStudents": total_students,
             "totalExperts": total_experts,
             "pendingExperts": pending_experts,
@@ -625,12 +628,12 @@ class AdminAnalyticsReportsView(APIView):
         # Quiz completion rate
         total_attempts = QuizAttempt.objects.count()
         attempts = QuizAttempt.objects.all()
-        avg_score = round(sum(a.score / a.total_questions for a in attempts) / max(attempts.count(), 1) * 100) if attempts.exists() else 78
+        avg_score = round(sum(a.score / a.total_questions for a in attempts) / max(attempts.count(), 1) * 100) if attempts.exists() else 0
 
         # Task completion
         total_tasks = Task.objects.count()
         completed_tasks = Task.objects.filter(status='Completed').count()
-        task_rate = round((completed_tasks / max(total_tasks, 1)) * 100) if total_tasks else 82
+        task_rate = round((completed_tasks / max(total_tasks, 1)) * 100) if total_tasks else 0
 
         with connection.cursor() as cursor:
             cursor.execute("SELECT COUNT(*) FROM guidance_requests WHERE status IN ('approved', 'replied')")
@@ -638,7 +641,7 @@ class AdminAnalyticsReportsView(APIView):
 
             cursor.execute("SELECT COUNT(*) FROM guidance_requests")
             total_requests = cursor.fetchone()[0]
-            mentor_resp_rate = round((answered_requests / max(total_requests, 1)) * 100) if total_requests else 90
+            mentor_resp_rate = round((answered_requests / max(total_requests, 1)) * 100) if total_requests else 0
 
         return Response({
             "overview": {
@@ -649,16 +652,6 @@ class AdminAnalyticsReportsView(APIView):
                 "taskCompletionRate": task_rate,
                 "mentorResponseRate": mentor_resp_rate,
             },
-            "domainDistribution": [
-                {"domain": "Software Development", "percentage": 38},
-                {"domain": "Data Science & AI", "percentage": 32},
-                {"domain": "Cybersecurity & Cloud", "percentage": 18},
-                {"domain": "Product & UX Design", "percentage": 12},
-            ],
-            "monthlyEngagement": [
-                {"month": "May", "assessments": 120, "quizzes": 310, "guidance": 45},
-                {"month": "Jun", "assessments": 190, "quizzes": 460, "guidance": 68},
-                {"month": "Jul", "assessments": 280, "quizzes": 720, "guidance": 95},
-                {"month": "Aug", "assessments": 410, "quizzes": 980, "guidance": 130},
-            ]
+            "domainDistribution": metrics.career_distribution(),
+            "monthlyEngagement": metrics.monthly_engagement(),
         }, status=status.HTTP_200_OK)

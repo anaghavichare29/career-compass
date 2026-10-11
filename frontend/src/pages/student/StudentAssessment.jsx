@@ -247,16 +247,12 @@ const StudentAssessment = () => {
      NEXT QUESTION / SECTION
   ===================================================== */
 
+  // Stay where the student is: no automatic scrolling between questions.
   const handleNext = () => {
     if (!selectedAnswer) return;
 
     if (currentQuestion < section.questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
-
-      window.scrollTo({
-        top: 0,
-        behavior: "smooth",
-      });
 
       return;
     }
@@ -264,11 +260,6 @@ const StudentAssessment = () => {
     setCurrentQuestion(0);
 
     setCurrentSection(currentSection + 1);
-
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
   };
 
   /* =====================================================
@@ -279,11 +270,6 @@ const StudentAssessment = () => {
     if (currentQuestion > 0) {
       setCurrentQuestion(currentQuestion - 1);
 
-      window.scrollTo({
-        top: 0,
-        behavior: "smooth",
-      });
-
       return;
     }
 
@@ -293,11 +279,6 @@ const StudentAssessment = () => {
       setCurrentSection(currentSection - 1);
 
       setCurrentQuestion(previousSection.questions.length - 1);
-
-      window.scrollTo({
-        top: 0,
-        behavior: "smooth",
-      });
     }
   };
 

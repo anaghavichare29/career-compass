@@ -70,21 +70,45 @@ const StudentCareerReadiness = () => {
     );
   }
 
+  if (data && data.has_data === false) {
+    return (
+      <StudentLayout pageTitle="Career Readiness">
+        <div className="career-readiness-page">
+          <section className="readiness-introduction">
+            <span className="student-section-label">CAREER PREPARATION</span>
+            <h1>Career Readiness</h1>
+            <p>
+              Take the career assessment first. Your results are calculated from your
+              recommended career and your real progress, so there is nothing to show yet.
+            </p>
+          </section>
+          <button
+            className="student-primary-btn"
+            onClick={() => (window.location.href = "/student/assessment")}
+          >
+            Take the Assessment
+            <i className="bi bi-arrow-right"></i>
+          </button>
+        </div>
+      </StudentLayout>
+    );
+  }
+
   const r = data?.readiness || {
-    overall: data?.overall || 65,
-    insight: "Your career preparation is making solid progress. Complete key milestones to boost readiness.",
-    skill_progress: 70,
-    roadmap_progress: 65,
-    level: "Job Ready",
-    level_note: "Solid foundational knowledge demonstrated.",
+    overall: data?.overall || 0,
+    insight: "Complete your learning tasks and quizzes to build your career readiness.",
+    skill_progress: 0,
+    roadmap_progress: 0,
+    level: "Getting Started",
+    level_note: "Work through your roadmap one step at a time.",
     categories: data?.categories || [],
     strengths: data?.strengths || [],
     improvement_areas: data?.improvementAreas || data?.improvement_areas || [],
     next_steps: data?.next_steps || [],
   };
 
-  const targetCareer = data?.target_career || data?.targetCareer || "Data Analyst";
-  const careerMatch = data?.career_match || data?.careerMatch || 78;
+  const targetCareer = data?.target_career || data?.targetCareer || "";
+  const careerMatch = data?.career_match ?? data?.careerMatch ?? 0;
 
   return (
     <StudentLayout pageTitle="Career Readiness">

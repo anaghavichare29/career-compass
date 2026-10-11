@@ -25,5 +25,15 @@ class Task(models.Model):
     class Meta:
         db_table = 'tasks'
 
+    @property
+    def percent(self):
+        """0-100 completion of this task, used by roadmap, skill-gap and readiness."""
+        if self.status == 'Completed':
+            return 100
+        pct = min(100, round(self.completed_lessons / max(self.total_lessons, 1) * 100))
+        if self.status == 'Needs Revision':
+            pct = min(pct, 60)
+        return pct
+
     def __str__(self):
         return self.title

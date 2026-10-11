@@ -12,6 +12,7 @@ from .views import (
     MentorAssignTaskView,
     MentorAssignRoadmapView,
     LearningResourcesView,
+    MyMentorsView,
 )
 
 urlpatterns = [
@@ -27,4 +28,5 @@ urlpatterns = [
     path('assign-task/', MentorAssignTaskView.as_view(), name='mentorship-assign-task'),
     path('assign-roadmap/', MentorAssignRoadmapView.as_view(), name='mentorship-assign-roadmap'),
     path('resources/', LearningResourcesView.as_view(), name='mentorship-resources'),
+    path('my-mentors/', MyMentorsView.as_view(), name='mentorship-my-mentors'),
 ]

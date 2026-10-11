@@ -6,7 +6,7 @@ from rest_framework import status
 from .models import Quiz, QuizQuestion, QuizAttempt
 from .serializers import (
     QuizListSerializer, QuizDetailSerializer, QuizAttemptSerializer,
-    QuizReviewListSerializer,
+    QuizReviewListSerializer, MyQuizSubmissionSerializer,
 )
 from .generator import generate_initial_quizzes, generate_quiz_for_skill, get_skills_for_user
 
@@ -137,13 +137,29 @@ class SubmitQuizAttemptView(APIView):
 class CreateStudentQuizView(APIView):
     """POST /api/quizzes/create/  body:
     { user_id, title, skill, description, questions: [{question, options, correct_index}, ...] }
-    Saved as pending — only visible to the student until an expert approves it."""
+    Saved as pending and sent to the student's mentor(s) for review."""
 
     def post(self, request):
         data = request.data
         required = ['user_id', 'title', 'skill', 'questions']
         if not all(data.get(f) for f in required):
             return Response({"detail": "Missing required fields."}, status=status.HTTP_400_BAD_REQUEST)
+
+        questions = data['questions']
+        if not isinstance(questions, list) or not questions:
+            return Response({"detail": "Add at least one question."}, status=status.HTTP_400_BAD_REQUEST)
+        clean = []
+        for i, q in enumerate(questions, start=1):
+            try:
+                options = [str(o).strip() for o in q['options']]
+                correct = int(q['correct_index'])
+                text = str(q['question']).strip()
+            except (KeyError, TypeError, ValueError):
+                return Response({"detail": f"Question {i} is malformed."}, status=status.HTTP_400_BAD_REQUEST)
+            if not text or len(options) != 4 or any(not o for o in options) or not 0 <= correct < 4:
+                return Response({"detail": f"Question {i} needs text, four options and a correct answer."},
+                                status=status.HTTP_400_BAD_REQUEST)
+            clean.append(QuizQuestion(question=text, options=options, correct_index=correct))
 
         quiz = Quiz.objects.create(
             user_id=data['user_id'],
@@ -155,39 +171,68 @@ class CreateStudentQuizView(APIView):
             source='student',
             status='pending',
         )
+        for q in clean:
+            q.quiz = quiz
+        QuizQuestion.objects.bulk_create(clean)
 
-        QuizQuestion.objects.bulk_create([
-            QuizQuestion(
-                quiz=quiz,
-                question=q['question'],
-                options=q['options'],
-                correct_index=q['correct_index'],
-            )
-            for q in data['questions']
-        ])
+        from mentorship.services import notify, notify_student_mentors
+        from accounts.models import User
+        student = User.objects.filter(user_id=data['user_id']).first()
+        student_name = f"{student.first_name} {student.last_name or ''}".strip() if student else f"Student #{data['user_id']}"
+        mentors_notified = notify_student_mentors(
+            data['user_id'],
+            f"Quiz awaiting review: {quiz.title}",
+            f"{student_name} created the quiz \"{quiz.title}\" ({quiz.skill}) and sent it for your review.",
+            "quiz",
+        )
+        notify(
+            data['user_id'],
+            f"Quiz '{quiz.title}' submitted for review",
+            ("Your quiz was sent to your mentor. You'll be notified when it is approved or needs changes."
+             if mentors_notified else
+             "Your quiz is saved. You are not connected with a mentor yet; a mentor will see it once they accept your guidance request."),
+            "quiz",
+        )
 
-        try:
-            from django.db import connection
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    "INSERT INTO notifications (user_id, title, message, type) VALUES (%s, %s, %s, %s)",
-                    [
-                        data['user_id'],
-                        f"Quiz '{data['title']}' Submitted for Evaluation",
-                        "Your quiz has been sent to industry experts for review. Once approved, it will be posted for other students.",
-                        "quiz",
-                    ]
-                )
-        except Exception:
-            pass
+        return Response(
+            {"detail": "Quiz submitted for mentor review.", "quiz_id": quiz.id, "mentors_notified": mentors_notified},
+            status=status.HTTP_201_CREATED,
+        )
 
-        return Response({"detail": "Quiz submitted for expert review.", "quiz_id": quiz.id}, status=status.HTTP_201_CREATED)
+
+class MyQuizSubmissionsView(ListAPIView):
+    """GET /api/quizzes/my-submissions/?user_id=X - the student's own quizzes sent for review (any status)."""
+    serializer_class = MyQuizSubmissionSerializer
+
+    def get_queryset(self):
+        user_id = self.request.query_params.get('user_id')
+        if not user_id:
+            return Quiz.objects.none()
+        return Quiz.objects.filter(user_id=user_id, source='student').order_by('-created_at')
 
 
 class PendingReviewQuizListView(ListAPIView):
-    """GET /api/quizzes/pending-review/ — for industry experts."""
+    """GET /api/quizzes/pending-review/?mentor_user_id=X
+    Student-created quizzes waiting for review. With mentor_user_id, only quizzes from
+    that mentor's students are returned."""
     serializer_class = QuizReviewListSerializer
-    queryset = Quiz.objects.filter(source='student', status='pending').order_by('created_at')
+
+    def get_queryset(self):
+        qs = Quiz.objects.filter(source='student', status='pending').order_by('created_at').prefetch_related('questions')
+        mentor_user_id = self.request.query_params.get('mentor_user_id')
+        if mentor_user_id and str(mentor_user_id).isdigit():
+            from mentorship.services import student_ids_for_mentor
+            qs = qs.filter(user_id__in=student_ids_for_mentor(int(mentor_user_id)))
+        return qs
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        from accounts.models import User
+        ids = Quiz.objects.filter(source='student', status='pending').values_list('user_id', flat=True)
+        context['student_names'] = {
+            u.user_id: f"{u.first_name} {u.last_name or ''}".strip() for u in User.objects.filter(user_id__in=set(ids))
+        }
+        return context
 
 
 class ReviewQuizView(APIView):
@@ -198,6 +243,9 @@ class ReviewQuizView(APIView):
             quiz = Quiz.objects.get(pk=pk)
         except Quiz.DoesNotExist:
             return Response({"detail": "Quiz not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        if quiz.source != 'student':
+            return Response({"detail": "Only student-created quizzes can be reviewed."}, status=status.HTTP_400_BAD_REQUEST)
 
         decision = request.data.get('decision')
         if decision not in ('approved', 'rejected'):

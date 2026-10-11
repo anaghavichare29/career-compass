@@ -886,3 +886,13 @@ class LearningResourcesView(APIView):
 
         return Response({"detail": "Resource added successfully."}, status=status.HTTP_201_CREATED)
 
+
+class MyMentorsView(APIView):
+    """GET /api/mentorship/my-mentors/?user_id=X - mentors connected to this student."""
+
+    def get(self, request):
+        user_id = request.query_params.get("user_id")
+        if not user_id or not str(user_id).isdigit():
+            return Response({"detail": "A valid user_id is required."}, status=status.HTTP_400_BAD_REQUEST)
+        from .services import mentors_for_student
+        return Response(mentors_for_student(int(user_id)), status=status.HTTP_200_OK)

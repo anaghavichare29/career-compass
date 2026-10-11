@@ -56,6 +56,7 @@ const StudentTasks = () => {
   const [assignmentNotes, setAssignmentNotes] = useState("");
   const [assignmentFile, setAssignmentFile] = useState("");
   const [assignmentSuccess, setAssignmentSuccess] = useState("");
+  const [assignmentError, setAssignmentError] = useState("");
 
   const user = JSON.parse(localStorage.getItem("user"));
 
@@ -113,6 +114,7 @@ const StudentTasks = () => {
     setAssignmentNotes(task.submissionNotes || "");
     setAssignmentFile("");
     setAssignmentSuccess("");
+    setAssignmentError("");
   };
 
   const handleAdvanceLesson = async () => {
@@ -137,8 +139,15 @@ const StudentTasks = () => {
   const handleSubmitAssignment = async (e) => {
     e.preventDefault();
     if (!selectedTask || !user) return;
+
+    if (!assignmentNotes.trim() && !assignmentFile.trim()) {
+      setAssignmentError("Add a project link or a few notes so your mentor has something to review.");
+      return;
+    }
+
     setSubmittingAssignment(true);
     setAssignmentSuccess("");
+    setAssignmentError("");
 
     try {
       const res = await api.post(`tasks/${selectedTask.id}/submit-assignment/`, {
@@ -152,11 +161,15 @@ const StudentTasks = () => {
         progress: getProgress(updated),
         status: getStatus(updated),
       });
-      setAssignmentSuccess("Assignment submitted successfully to your mentor!");
+      setAssignmentSuccess(
+        res.data.mentors_notified > 0
+          ? "Submitted! Your mentor has been notified and will review it soon."
+          : "Saved. You are not connected with a mentor yet. Your mentor will see this once they accept your guidance request.",
+      );
       loadTasks();
     } catch (err) {
       console.error("Failed to submit assignment:", err);
-      alert("Could not submit assignment. Please try again.");
+      setAssignmentError(err.response?.data?.detail || "Could not submit assignment. Please try again.");
     } finally {
       setSubmittingAssignment(false);
     }
@@ -554,6 +567,13 @@ const StudentTasks = () => {
                 <p style={{ color: "#64748b", fontSize: "0.85rem", marginBottom: "1rem" }}>
                   Share your project repository, notes, or deliverable for this course to receive mentor evaluation.
                 </p>
+
+                {assignmentError && (
+                  <div style={{ padding: "0.6rem 0.8rem", borderRadius: "8px", background: "#fef2f2", color: "#b91c1c", marginBottom: "1rem", fontSize: "0.85rem" }}>
+                    <i className="bi bi-exclamation-circle-fill" style={{ marginRight: "0.4rem" }}></i>
+                    {assignmentError}
+                  </div>
+                )}
 
                 {assignmentSuccess && (
                   <div style={{ padding: "0.6rem 0.8rem", borderRadius: "8px", background: "#ecfdf5", color: "#047857", marginBottom: "1rem", fontSize: "0.85rem" }}>

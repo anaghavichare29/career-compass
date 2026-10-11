@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import api from "../../services/api";
 import AdminLayout from "../../components/admin/AdminLayout";
-import "./AdminStudents.css";
+import { Badge, Card, EmptyState, Loading, PageHeader, Segmented, toneForStatus } from "../../components/ui/ui";
+import "./Admin.css";
 
 const AdminQuizzes = () => {
   const [quizzes, setQuizzes] = useState([]);
@@ -42,128 +43,116 @@ const AdminQuizzes = () => {
 
   return (
     <AdminLayout activePage="quizzes" pageTitle="Quizzes & Tests">
-      <main className="admin-students-content">
-        <button className="admin-back-button" onClick={() => (window.location.href = "/admin/dashboard")}>
-          <i className="bi bi-arrow-left"></i> Back to Dashboard
-        </button>
+      <main className="adm-page">
+      <PageHeader
+        eyebrow="Content"
+        title="Quizzes & Assessment Activity"
+        subtitle="Monitor student assessments, review platform quizzes and keep quiz quality high."
+        actions={
+          <Segmented
+            value={activeSubTab}
+            onChange={setActiveSubTab}
+            options={[
+              { value: "quizzes", label: `Platform Quizzes (${quizzes.length})` },
+              { value: "assessments", label: `Student Submissions (${assessments.length})` },
+            ]}
+          />
+        }
+      />
 
-        <section className="admin-page-heading">
-          <div>
-            <span className="admin-section-label">ASSESSMENT & TESTING MONITORING</span>
-            <h2>Quizzes & Assessment Activity</h2>
-            <p>Monitor student assessments, review platform quizzes, and maintain quiz quality.</p>
-          </div>
-
-          <div style={{ display: "flex", gap: "8px" }}>
-            <button
-              className={activeSubTab === "quizzes" ? "admin-primary-button" : "admin-back-button"}
-              onClick={() => setActiveSubTab("quizzes")}
-              style={{ margin: 0 }}
-            >
-              Platform Quizzes ({quizzes.length})
-            </button>
-            <button
-              className={activeSubTab === "assessments" ? "admin-primary-button" : "admin-back-button"}
-              onClick={() => setActiveSubTab("assessments")}
-              style={{ margin: 0 }}
-            >
-              Student Submissions ({assessments.length})
-            </button>
-          </div>
-        </section>
-
-        {activeSubTab === "quizzes" ? (
-          <section className="admin-table-card">
-            <div className="admin-table-header">
-              <h3>All Platform Quizzes ({quizzes.length})</h3>
-            </div>
-
-            <div style={{ overflowX: "auto" }}>
-              <table className="admin-table">
+      {activeSubTab === "quizzes" ? (
+        <Card flush title={`All platform quizzes (${quizzes.length})`}>
+          {loading ? (
+            <Loading label="Loading quizzes..." />
+          ) : quizzes.length === 0 ? (
+            <EmptyState icon="bi-clipboard2-check" title="No quizzes yet">
+              Quizzes are generated for students from their roadmap skills.
+            </EmptyState>
+          ) : (
+            <div className="cc-table-wrap">
+              <table className="cc-table">
                 <thead>
                   <tr>
-                    <th>Quiz Title</th>
-                    <th>Skill Focus</th>
+                    <th>Quiz</th>
+                    <th>Skill focus</th>
                     <th>Source</th>
                     <th>Status</th>
                     <th>Difficulty</th>
-                    <th>Questions</th>
+                    <th className="cc-num">Questions</th>
                     <th>Author</th>
-                    <th>Actions</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
                   {quizzes.map((q) => (
                     <tr key={q.id}>
                       <td>
-                        <strong>{q.title}</strong>
-                        <div style={{ fontSize: "12px", color: "#64748b" }}>Duration: {q.durationMinutes} mins</div>
+                        <strong className="adm-strong">{q.title}</strong>
+                        <small className="cc-muted adm-block">{q.durationMinutes} min</small>
                       </td>
-                      <td><span style={{ fontWeight: "600", color: "#2f5bea" }}>{q.skill}</span></td>
+                      <td><span className="adm-career">{q.skill}</span></td>
                       <td>
-                        <span style={{ textTransform: "capitalize", fontSize: "12px", fontWeight: "600", color: q.source === "ai" ? "#7c3aed" : "#2563eb" }}>
-                          {q.source}
-                        </span>
+                        <Badge tone={q.source === "ai" ? "purple" : "blue"}>
+                          {q.source === "ai" ? "AI generated" : "Student"}
+                        </Badge>
                       </td>
-                      <td>
-                        <span className={`admin-status-pill ${q.status === "approved" ? "success" : "pending"}`}>
-                          {q.status}
-                        </span>
-                      </td>
+                      <td><Badge tone={toneForStatus(q.status)} dot>{q.status}</Badge></td>
                       <td>{q.difficulty}</td>
-                      <td><strong>{q.questionsCount}</strong></td>
+                      <td className="cc-num"><strong>{q.questionsCount}</strong></td>
                       <td>
                         <div>{q.author}</div>
-                        <small style={{ color: "#64748b" }}>{q.authorRole}</small>
+                        <small className="cc-muted">{q.authorRole}</small>
                       </td>
                       <td>
-                        <button
-                          onClick={() => handleDeleteQuiz(q.id)}
-                          style={{ padding: "6px 10px", borderRadius: "6px", background: "#fee2e2", color: "#b91c1c", border: "none", cursor: "pointer", fontSize: "12px", fontWeight: "600" }}
-                        >
-                          <i className="bi bi-trash"></i> Delete
-                        </button>
+                        <div className="cc-actions">
+                          <button className="cc-btn cc-btn--danger-soft cc-btn--sm" onClick={() => handleDeleteQuiz(q.id)}>
+                            <i className="bi bi-trash"></i> Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </section>
-        ) : (
-          <section className="admin-table-card">
-            <div className="admin-table-header">
-              <h3>Student Assessment Submissions ({assessments.length})</h3>
-            </div>
-
-            <div style={{ overflowX: "auto" }}>
-              <table className="admin-table">
+          )}
+        </Card>
+      ) : (
+        <Card flush title={`Student assessment submissions (${assessments.length})`}>
+          {loading ? (
+            <Loading label="Loading submissions..." />
+          ) : assessments.length === 0 ? (
+            <EmptyState icon="bi-clipboard-data" title="No submissions yet">
+              Completed career assessments will show up here.
+            </EmptyState>
+          ) : (
+            <div className="cc-table-wrap">
+              <table className="cc-table">
                 <thead>
                   <tr>
-                    <th>Student Name</th>
+                    <th>Student</th>
                     <th>Email</th>
-                    <th>Recommended Career</th>
-                    <th>Match %</th>
-                    <th>Submitted At</th>
+                    <th>Recommended career</th>
+                    <th className="cc-num">Match</th>
+                    <th>Submitted</th>
                   </tr>
                 </thead>
                 <tbody>
                   {assessments.map((a) => (
                     <tr key={a.id}>
-                      <td><strong>{a.studentName}</strong></td>
-                      <td style={{ color: "#64748b" }}>{a.email}</td>
-                      <td><strong style={{ color: "#2f5bea" }}>{a.recommendedCareer}</strong></td>
-                      <td>
-                        <span style={{ fontWeight: "700", color: "#10b981" }}>{a.matchPercent}%</span>
-                      </td>
-                      <td style={{ fontSize: "13px", color: "#64748b" }}>{a.submittedAt}</td>
+                      <td><strong className="adm-strong">{a.studentName}</strong></td>
+                      <td className="cc-muted">{a.email}</td>
+                      <td><span className="adm-career">{a.recommendedCareer}</span></td>
+                      <td className="cc-num"><strong className="adm-good">{a.matchPercent}%</strong></td>
+                      <td className="cc-muted cc-text-sm">{a.submittedAt}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </section>
-        )}
+          )}
+        </Card>
+      )}
       </main>
     </AdminLayout>
   );

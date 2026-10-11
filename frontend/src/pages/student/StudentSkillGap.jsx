@@ -70,19 +70,43 @@ const StudentSkillGap = () => {
     );
   }
 
-  const targetCareer = data?.target_career || data?.targetCareer || "Data Analyst";
-  const careerMatch = data?.career_match || data?.careerMatch || 78;
+  if (data && data.has_data === false) {
+    return (
+      <StudentLayout pageTitle="Skill Gap">
+        <div className="skill-gap-page">
+          <section className="skill-gap-introduction">
+            <span className="student-section-label">SKILL ANALYSIS</span>
+            <h1>Skill Gap</h1>
+            <p>
+              Take the career assessment first. Your results are calculated from your
+              recommended career and your real progress, so there is nothing to show yet.
+            </p>
+          </section>
+          <button
+            className="student-primary-btn"
+            onClick={() => (window.location.href = "/student/assessment")}
+          >
+            Take the Assessment
+            <i className="bi bi-arrow-right"></i>
+          </button>
+        </div>
+      </StudentLayout>
+    );
+  }
+
+  const targetCareer = data?.target_career || data?.targetCareer || "";
+  const careerMatch = data?.career_match ?? data?.careerMatch ?? 0;
   const skills = data?.skills || [];
   const summary = data?.skill_summary || data?.summary || {
-    overall: 65,
-    strong_count: 2,
-    improve_count: 3,
-    largest_gap: { name: "Python", gap: 35 },
+    overall: 0,
+    strong_count: 0,
+    improve_count: 0,
+    largest_gap: null,
   };
   const insight = data?.skill_insight || data?.insight || {
-    title: "Focus on Core Fundamentals",
-    description: "Strengthening key technical skills will accelerate your roadmap progress.",
-    recommendation: "Take domain quizzes and complete assigned learning tasks.",
+    title: "Keep building your skills",
+    description: "Complete your learning tasks and quizzes to see how you compare with your target career.",
+    recommendation: "Open your roadmap and start the current skill.",
   };
 
   const improvementSkills = skills

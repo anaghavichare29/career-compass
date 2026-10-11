@@ -1,7 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import api from "../../services/api";
 import AdminLayout from "../../components/admin/AdminLayout";
-import "./AdminExperts.css";
+import {
+  Avatar, Badge, Card, EmptyState, Loading, Modal, PageHeader, SearchInput, StatCard, toneForStatus,
+} from "../../components/ui/ui";
+import "./Admin.css";
 
 const AdminExperts = () => {
   const [experts, setExperts] = useState([]);
@@ -139,339 +142,140 @@ const AdminExperts = () => {
   };
 
   return (
-    <AdminLayout activePage="experts" pageTitle="Experts">
-      <main className="admin-experts-content">
-        <button
-          className="admin-back-button"
-          type="button"
-          onClick={() => (window.location.href = "/admin/dashboard")}
-        >
-          <i className="bi bi-arrow-left"></i> Back to Dashboard
-        </button>
+    <AdminLayout activePage="experts" pageTitle="Industry Experts">
+      <main className="adm-page">
+      <PageHeader
+        eyebrow="People"
+        title="Manage Industry Mentors"
+        subtitle="Verify professional accounts, review credentials and control mentor access to students."
+      />
 
-        {/* PAGE HEADING */}
-        <section className="admin-page-heading">
-          <div>
-            <span className="admin-section-label">
-              INDUSTRY EXPERT MANAGEMENT
-            </span>
-            <h2>Manage Industry Mentors</h2>
-            <p>
-              Verify professional accounts, review credentials, approve
-              mentorship requests, and manage mentor status.
-            </p>
-          </div>
-        </section>
+      <div className="cc-grid cc-grid--4 adm-section">
+        <StatCard icon="bi-person-badge" tone="purple" label="Total Mentors" value={experts.length} hint="Registered experts" />
+        <StatCard icon="bi-patch-check" tone="green" label="Verified & Approved" value={approvedCount} hint="Actively guiding students" />
+        <StatCard icon="bi-clock-history" tone="orange" label="Pending Verification" value={pendingCount} hint="Needs admin review" />
+        <StatCard icon="bi-x-circle" tone="red" label="Rejected" value={rejectedCount} hint="Unapproved requests" />
+      </div>
 
-        {/* STATISTICS */}
-        <section className="expert-admin-stats">
-          <div className="expert-admin-stat">
-            <div className="expert-admin-stat-icon purple">
-              <i className="bi bi-person-badge"></i>
-            </div>
-            <div>
-              <span>Total Mentors</span>
-              <h3>{experts.length}</h3>
-              <small>Registered Experts</small>
-            </div>
-          </div>
-
-          <div className="expert-admin-stat">
-            <div className="expert-admin-stat-icon green">
-              <i className="bi bi-check-circle"></i>
-            </div>
-            <div>
-              <span>Verified & Approved</span>
-              <h3>{approvedCount}</h3>
-              <small>Actively Guiding</small>
-            </div>
-          </div>
-
-          <div className="expert-admin-stat">
-            <div className="expert-admin-stat-icon orange">
-              <i className="bi bi-clock-history"></i>
-            </div>
-            <div>
-              <span>Pending Verification</span>
-              <h3>{pendingCount}</h3>
-              <small>Requires Admin Review</small>
-            </div>
-          </div>
-
-          <div className="expert-admin-stat">
-            <div className="expert-admin-stat-icon red">
-              <i className="bi bi-x-circle"></i>
-            </div>
-            <div>
-              <span>Rejected / Need Edit</span>
-              <h3>{rejectedCount}</h3>
-              <small>Unapproved Requests</small>
-            </div>
-          </div>
-        </section>
-
-        {/* CONTROLS */}
-        <section className="admin-controls">
-          <div className="admin-search-box">
-            <i className="bi bi-search"></i>
-            <input
-              type="text"
-              placeholder="Search by mentor name, company, role, or domain..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-
-          <div className="admin-filter-group">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
+      <Card
+        flush
+        title={`Industry Experts (${filteredExperts.length})`}
+        action={
+          <div className="cc-toolbar">
+            <SearchInput value={searchTerm} onChange={setSearchTerm} placeholder="Search name, company, role or domain..." />
+            <select className="cc-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <option>All Status</option>
               <option>Approved</option>
               <option>Pending</option>
               <option>Rejected</option>
             </select>
-
-            <select
-              value={domainFilter}
-              onChange={(e) => setDomainFilter(e.target.value)}
-            >
+            <select className="cc-select" value={domainFilter} onChange={(e) => setDomainFilter(e.target.value)}>
               {domains.map((d) => (
                 <option key={d}>{d}</option>
               ))}
             </select>
           </div>
-        </section>
-
-        {/* TABLE */}
-        <section className="admin-table-card">
-          <div className="admin-table-header">
-            <h3>Industry Experts ({filteredExperts.length})</h3>
-          </div>
-
-          {loading ? (
-            <div
-              style={{ textAlign: "center", padding: "40px", color: "#64748b" }}
-            >
-              <i
-                className="bi bi-arrow-repeat"
-                style={{ fontSize: "24px" }}
-              ></i>
-              <p>Loading mentors...</p>
-            </div>
-          ) : filteredExperts.length === 0 ? (
-            <div
-              style={{ textAlign: "center", padding: "40px", color: "#64748b" }}
-            >
-              <p>No mentors found matching your filters.</p>
-            </div>
-          ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table className="admin-table">
-                <thead>
-                  <tr>
-                    <th>Expert</th>
-                    <th>Designation & Company</th>
-                    <th>Industry Domain</th>
-                    <th>Experience</th>
-                    <th>Verification</th>
-                    <th>Account Status</th>
-                    <th>Joined</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredExperts.map((exp) => (
-                    <tr key={exp.id}>
-                      <td>
-                        <div className="admin-user-cell">
-                          <div className="admin-table-avatar">
-                            {exp.initials || exp.name.charAt(0)}
-                          </div>
-                          <div>
-                            <strong>{exp.name}</strong>
-                          </div>
+        }
+      >
+        {loading ? (
+          <Loading label="Loading mentors..." />
+        ) : filteredExperts.length === 0 ? (
+          <EmptyState icon="bi-person-badge" title="No mentors found">
+            No mentors match your search or filters.
+          </EmptyState>
+        ) : (
+          <div className="cc-table-wrap">
+            <table className="cc-table">
+              <thead>
+                <tr>
+                  <th>Expert</th>
+                  <th>Role & Company</th>
+                  <th>Domain</th>
+                  <th>Experience</th>
+                  <th>Verification</th>
+                  <th>Account</th>
+                  <th>Joined</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredExperts.map((exp) => (
+                  <tr key={exp.id}>
+                    <td>
+                      <div className="cc-user-cell">
+                        <Avatar name={exp.name} />
+                        <div>
+                          <strong>{exp.name}</strong>
                           <small>{exp.email}</small>
                         </div>
-                      </td>
-                      <td>
-                        <strong>{exp.role}</strong>
-                        <div style={{ fontSize: "12px", color: "#64748b" }}>
-                          {exp.company}
-                        </div>
-                      </td>
-                      <td>
-                        <span style={{ fontWeight: "600", color: "#2f5bea" }}>
-                          {exp.domain}
-                        </span>
-                      </td>
-                      <td>{exp.experience}</td>
-                      <td>
-                        <span
-                          className={`admin-status-pill ${exp.status === "Approved" ? "approved" : exp.status === "Rejected" ? "rejected" : "pending"}`}
-                        >
-                          {exp.status}
-                        </span>
-                      </td>
-                      <td>
-                        <span
-                          className={`admin-status-pill ${exp.accountStatus === "Active" ? "active" : "inactive"}`}
-                        >
-                          {exp.accountStatus || "Active"}
-                        </span>
-                      </td>
-                      <td style={{ fontSize: "12px", color: "#64748b" }}>
-                        {exp.joined}
-                      </td>
-                      <td>
-                        <div className="table-actions">
-                          <div className="action-grid">
-                            <button
-                              className="table-action-button view"
-                              onClick={() => handleViewExpert(exp)}
-                            >
-                              <i className="bi bi-eye" aria-hidden="true"></i>
-                              <span>View Details</span>
-                            </button>
-                            {exp.status !== "Approved" && (
-                              <button
-                                className="table-action-button approve"
-                                onClick={() =>
-                                  updateExpertStatus(exp.id, "Approved")
-                                }
-                              >
-                                <i
-                                  className="bi bi-check-lg"
-                                  aria-hidden="true"
-                                ></i>
-                                <span>Approve</span>
-                              </button>
-                            )}
-                            {exp.status !== "Rejected" && (
-                              <button
-                                className="table-action-button reject"
-                                onClick={() =>
-                                  updateExpertStatus(exp.id, "Rejected")
-                                }
-                              >
-                                <i
-                                  className="bi bi-x-lg"
-                                  aria-hidden="true"
-                                ></i>
-                                <span>Reject</span>
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-      </main>
-
-      {/* DETAIL MODAL */}
-      {selectedExpert && (
-        <div
-          className="expert-modal-overlay"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setSelectedExpert(null);
-          }}
-        >
-          <div
-            className="expert-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="expert-detail-title"
-          >
-            <div className="expert-modal-header">
-              <div className="modal-profile">
-                <div className="modal-avatar">
-                  {selectedExpert.initials || selectedExpert.name.charAt(0)}
-                </div>
-                <div>
-                  <h3 id="expert-detail-title">{selectedExpert.name}</h3>
-                  <span>
-                    {selectedExpert.email} • ID #{selectedExpert.id}
-                  </span>
-                </div>
-              </div>
-              <button
-                className="modal-close"
-                onClick={() => setSelectedExpert(null)}
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="expert-modal-grid">
-              <div>
-                <span>Role / Designation</span>
-                <strong>{selectedExpert.role}</strong>
-              </div>
-              <div>
-                <span>Company</span>
-                <strong>{selectedExpert.company}</strong>
-              </div>
-              <div>
-                <span>Domain</span>
-                <strong>{selectedExpert.domain}</strong>
-              </div>
-              <div>
-                <span>Experience</span>
-                <strong>{selectedExpert.experience}</strong>
-              </div>
-              <div>
-                <span>Verification Status</span>
-                <strong>{selectedExpert.status}</strong>
-              </div>
-              <div>
-                <span>Account Status</span>
-                <strong>{selectedExpert.accountStatus || "Active"}</strong>
-              </div>
-            </div>
-
-            <div className="expert-modal-actions" style={{ marginTop: "24px" }}>
-              <button
-                className="expert-modal-secondary"
-                type="button"
-                onClick={() => setSelectedExpert(null)}
-              >
-                Close
-              </button>
-              <button
-                className="expert-modal-danger"
-                type="button"
-                onClick={() =>
-                  updateExpertStatus(
-                    selectedExpert.id,
-                    selectedExpert.status === "Approved"
-                      ? "Rejected"
-                      : "Approved",
-                  )
-                }
-              >
-                {selectedExpert.status === "Approved"
-                  ? "Revoke / Reject"
-                  : "Approve & Verify"}
-              </button>
-              <button
-                className="expert-modal-primary"
-                type="button"
-                onClick={() => handleToggleAccountStatus(selectedExpert.userId)}
-              >
-                {selectedExpert.accountStatus === "Active"
-                  ? "Deactivate Account"
-                  : "Activate Account"}
-              </button>
-            </div>
+                      </div>
+                    </td>
+                    <td>
+                      <strong className="adm-strong">{exp.role}</strong>
+                      <small className="cc-muted adm-block">{exp.company}</small>
+                    </td>
+                    <td><span className="adm-career">{exp.domain}</span></td>
+                    <td>{exp.experience}</td>
+                    <td><Badge tone={toneForStatus(exp.status)} dot>{exp.status}</Badge></td>
+                    <td><Badge tone={toneForStatus(exp.accountStatus || "Active")} dot>{exp.accountStatus || "Active"}</Badge></td>
+                    <td className="cc-muted cc-text-sm">{exp.joined}</td>
+                    <td>
+                      <div className="cc-actions">
+                        <button className="cc-btn cc-btn--secondary cc-btn--icon" title="View details" onClick={() => handleViewExpert(exp)}>
+                          <i className="bi bi-eye"></i>
+                        </button>
+                        {exp.status !== "Approved" && (
+                          <button className="cc-btn cc-btn--success-soft cc-btn--icon" title="Approve mentor" onClick={() => updateExpertStatus(exp.id, "Approved")}>
+                            <i className="bi bi-check-lg"></i>
+                          </button>
+                        )}
+                        {exp.status !== "Rejected" && (
+                          <button className="cc-btn cc-btn--danger-soft cc-btn--icon" title="Reject mentor" onClick={() => updateExpertStatus(exp.id, "Rejected")}>
+                            <i className="bi bi-x-lg"></i>
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </div>
+        )}
+      </Card>
+
+      {selectedExpert && (
+        <Modal
+          size="lg"
+          title={selectedExpert.name}
+          subtitle={`${selectedExpert.email} • ID #${selectedExpert.id}`}
+          onClose={() => setSelectedExpert(null)}
+          footer={
+            <>
+              <button className="cc-btn cc-btn--secondary" onClick={() => setSelectedExpert(null)}>Close</button>
+              <button
+                className={`cc-btn ${selectedExpert.status === "Approved" ? "cc-btn--danger-soft" : "cc-btn--success"}`}
+                onClick={() => updateExpertStatus(selectedExpert.id, selectedExpert.status === "Approved" ? "Rejected" : "Approved")}
+              >
+                {selectedExpert.status === "Approved" ? "Revoke / Reject" : "Approve & Verify"}
+              </button>
+              <button className="cc-btn cc-btn--primary" onClick={() => handleToggleAccountStatus(selectedExpert.userId)}>
+                {selectedExpert.accountStatus === "Active" ? "Deactivate Account" : "Activate Account"}
+              </button>
+            </>
+          }
+        >
+          <div className="adm-detail-grid">
+            <div><span>Role / Designation</span><strong>{selectedExpert.role}</strong></div>
+            <div><span>Company</span><strong>{selectedExpert.company}</strong></div>
+            <div><span>Domain</span><strong>{selectedExpert.domain}</strong></div>
+            <div><span>Experience</span><strong>{selectedExpert.experience}</strong></div>
+            <div><span>Verification</span><Badge tone={toneForStatus(selectedExpert.status)} dot>{selectedExpert.status}</Badge></div>
+            <div><span>Account</span><Badge tone={toneForStatus(selectedExpert.accountStatus || "Active")} dot>{selectedExpert.accountStatus || "Active"}</Badge></div>
+          </div>
+        </Modal>
       )}
+      </main>
     </AdminLayout>
   );
 };

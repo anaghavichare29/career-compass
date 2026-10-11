@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 80" role="img" aria-label="CareerCompass">
+  <defs>
+    <linearGradient id="bg" x1="6" y1="2" x2="74" y2="78" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4d7bff"/>
+      <stop offset="1" stop-color="#7c4ddb"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(0 0) scale(1.25)">
+    <rect width="64" height="64" rx="15" fill="url(#bg)"/>
+    <circle cx="32" cy="32" r="20.5" fill="none" stroke="#fff" stroke-width="3.2"/>
+    <g stroke="#fff" stroke-width="2.2" stroke-linecap="round" opacity=".85">
+      <path d="M32 8.5v4M32 51.5v4M8.5 32h4M51.5 32h4"/>
+    </g>
+    <g transform="rotate(45 32 32)">
+      <path d="M32 13 L39 32 L32 28 L25 32 Z" fill="#fff"/>
+      <path d="M32 51 L25 32 L32 36 L39 32 Z" fill="#fff" fill-opacity=".5"/>
+    </g>
+    <circle cx="32" cy="32" r="2.8" fill="#5b4fe0"/>
+  </g>
+  <text x="96" y="52" font-family="'Plus Jakarta Sans','Segoe UI',Arial,sans-serif" font-size="36" font-weight="700" letter-spacing="-1" fill="#111827">Career<tspan fill="#2f5bea" font-weight="800">Compass</tspan></text>
+</svg>

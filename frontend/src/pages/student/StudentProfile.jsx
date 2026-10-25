@@ -5,6 +5,8 @@ import "./StudentProfile.css";
 
 const StudentProfile = () => {
   const user = JSON.parse(localStorage.getItem("user"));
+  const selectedCareer = JSON.parse(localStorage.getItem("selectedCareer") || "null");
+  const targetCareerName = selectedCareer?.career_name || "";
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -427,7 +429,7 @@ const StudentProfile = () => {
               </div>
               <div>
                 <span>Target Career</span>
-                <strong>{profile.careerGoal || "Data Analyst"}</strong>
+                <strong>{targetCareerName || profile.careerGoal || "Not selected yet"}</strong>
               </div>
             </div>
 

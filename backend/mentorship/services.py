@@ -47,7 +47,8 @@ def mentors_for_student(student_id):
         for req in requests:
             cursor.execute(
                 """
-                SELECT p.professional_id, p.user_id, u.first_name, u.last_name, p.company, p.designation
+                SELECT p.professional_id, p.user_id, u.first_name, u.last_name,
+                       p.company, p.designation, p.industry, p.experience_years, p.skills
                 FROM professionals p JOIN users u ON u.user_id = p.user_id
                 WHERE p.professional_id = %s
                 """,
@@ -57,7 +58,8 @@ def mentors_for_student(student_id):
             if not row:  # legacy rows that stored the mentor's user_id
                 cursor.execute(
                     """
-                    SELECT p.professional_id, p.user_id, u.first_name, u.last_name, p.company, p.designation
+                    SELECT p.professional_id, p.user_id, u.first_name, u.last_name,
+                           p.company, p.designation, p.industry, p.experience_years, p.skills
                     FROM professionals p JOIN users u ON u.user_id = p.user_id
                     WHERE p.user_id = %s
                     """,
@@ -69,13 +71,21 @@ def mentors_for_student(student_id):
             seen.add(row[1])
             mentors.append({
                 "professionalId": row[0],
+                "mentor_id": row[0],
                 "userId": row[1],
+                "user_id": row[1],
                 "name": f"{row[2]} {row[3] or ''}".strip(),
                 "company": row[4] or "",
                 "designation": row[5] or "",
+                "industry": row[6] or "",
+                "experience_years": str(row[7]) if row[7] else "",
+                "skills": row[8] or "",
                 "status": req.status,
+                "topic": req.topic,
+                "online": False,
             })
     return mentors
+
 
 
 def notify(user_id, title, message, kind):

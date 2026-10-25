@@ -9,6 +9,7 @@ class RoadmapStage(models.Model):
     ]
 
     user_id = models.IntegerField()
+    career_name = models.CharField(max_length=150, blank=True, default='', db_index=True)
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
     duration = models.CharField(max_length=50, blank=True)  # e.g. "2–3 Weeks"

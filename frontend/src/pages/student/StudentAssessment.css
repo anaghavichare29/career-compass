@@ -905,3 +905,44 @@
     width: 100%;
   }
 }
+
+/* =====================================================
+   OTHER OPTION (custom answer)
+===================================================== */
+
+.other-option {
+  align-items: flex-start;
+  cursor: pointer;
+}
+
+.other-option-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.other-option-textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #1e293b;
+  background: #f8fafc;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.2s;
+  min-height: 56px;
+}
+
+.other-option-textarea:focus {
+  border-color: #6366f1;
+  background: #fff;
+}
+
+.assessment-option.other-option.selected .other-option-textarea {
+  border-color: #6366f1;
+  background: #f5f3ff;
+}

@@ -153,6 +153,92 @@ class TaskSubmitAssignmentView(APIView):
         return Response(data, status=status.HTTP_200_OK)
 
 
+class SubmitPracticeWorkView(APIView):
+    """
+    POST /api/tasks/submit-practice/
+    body: { user_id, skill, project_link, code_snippet, mentor_id }
+    Submitted from the Learning Workspace. Links to or creates a Task for the skill,
+    records submission, recalculates user progress, and notifies the selected mentor.
+    """
+
+    def post(self, request):
+        user_id = request.data.get('user_id')
+        skill = (request.data.get('skill') or '').strip()
+        project_link = (request.data.get('project_link') or '').strip()
+        code_snippet = (request.data.get('code_snippet') or '').strip()
+        mentor_id = request.data.get('mentor_id')
+
+        if not user_id:
+            return Response({"detail": "user_id is required."}, status=status.HTTP_400_BAD_REQUEST)
+        if not project_link and not code_snippet:
+            return Response({"detail": "Project link or code snippet is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Find or create task for this skill
+        task = Task.objects.filter(user_id=user_id, skill__iexact=skill).first()
+        if not task:
+            task = Task.objects.create(
+                user_id=user_id,
+                title=f"{skill} Practice Project",
+                description=f"Practical implementation and project work for {skill}.",
+                skill=skill,
+                course_name="Learning Workspace",
+                priority="Medium",
+                total_lessons=1,
+                completed_lessons=1,
+            )
+
+        task.submission_file = project_link
+        task.submission_notes = code_snippet
+        task.submitted_at = timezone.now()
+        task.status = 'Submitted'
+        task.completed_lessons = task.total_lessons
+        if mentor_id:
+            try:
+                task.mentor_id = int(mentor_id)
+            except (ValueError, TypeError):
+                pass
+        task.save()
+
+        _recalculate_user_progress(user_id)
+
+        from mentorship.services import notify
+        from accounts.models import User
+        student = User.objects.filter(user_id=user_id).first()
+        student_name = f"{student.first_name} {student.last_name or ''}".strip() if student else f"Student #{user_id}"
+
+        mentor_name = ""
+        if mentor_id:
+            mentor_user = User.objects.filter(user_id=mentor_id).first()
+            mentor_name = f"{mentor_user.first_name} {mentor_user.last_name or ''}".strip() if mentor_user else "Mentor"
+            notify(
+                int(mentor_id),
+                f"New Practice Submission: {skill}",
+                f"{student_name} submitted work for {skill} ({task.title}) and requested your review.",
+                "task",
+            )
+            notify(
+                user_id,
+                f"Practice Work Submitted: {skill}",
+                f"Your {skill} project has been submitted to {mentor_name} for review.",
+                "task",
+            )
+        else:
+            notify(
+                user_id,
+                f"Practice Work Saved: {skill}",
+                f"Your work for {skill} has been saved to your learning workspace.",
+                "task",
+            )
+
+        return Response({
+            "detail": "Practice work submitted successfully.",
+            "task_id": task.id,
+            "mentor_id": task.mentor_id,
+            "mentor_name": mentor_name,
+        }, status=status.HTTP_200_OK)
+
+
+
 class TaskMentorFeedbackView(APIView):
     """POST /api/tasks/<id>/feedback/  body: { mentor_id, feedback, status: 'Completed'|'Needs Revision' }"""
 

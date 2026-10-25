@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import StudentLayout from "../../components/student/StudentLayout";
 import api from "../../services/api";
+import CareerPathSelector from "../../components/student/CareerPathSelector";
 import "./StudentCareerReadiness.css";
 
 const StudentCareerReadiness = () => {
@@ -8,31 +9,33 @@ const StudentCareerReadiness = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    const load = async () => {
+  const loadCareerReadiness = async (careerOverride = null) => {
+    try {
+      setLoading(true);
+      const user = JSON.parse(localStorage.getItem("user") || "null");
+      const userId = user?.user_id;
+      const selectedCareer = careerOverride || JSON.parse(localStorage.getItem("selectedCareer") || "null");
+      
+      const params = userId ? { user_id: userId } : {};
+      if (selectedCareer?.career_name) params.career_name = selectedCareer.career_name;
+
+      let response;
       try {
-        const user = JSON.parse(localStorage.getItem("user") || "null");
-        const userId = user?.user_id;
-        
-        let response;
-        try {
-          response = await api.get("students/career-readiness/", {
-            params: userId ? { user_id: userId } : {},
-          });
-        } catch {
-          response = await api.get("progress/insights/", {
-            params: userId ? { user_id: userId } : {},
-          });
-        }
-        setData(response.data);
-      } catch (err) {
-        console.error("Failed to load career readiness:", err);
-        setError("Could not load your career readiness right now.");
-      } finally {
-        setLoading(false);
+        response = await api.get("students/career-readiness/", { params });
+      } catch {
+        response = await api.get("progress/insights/", { params });
       }
-    };
-    load();
+      setData(response.data);
+    } catch (err) {
+      console.error("Failed to load career readiness:", err);
+      setError("Could not load your career readiness right now.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCareerReadiness();
   }, []);
 
   if (loading) {
@@ -113,6 +116,7 @@ const StudentCareerReadiness = () => {
   return (
     <StudentLayout pageTitle="Career Readiness">
       <div className="career-readiness-page">
+        <CareerPathSelector onCareerChange={(career) => loadCareerReadiness(career)} selectedCareerName={targetCareer} />
 
         <section className="readiness-introduction">
           <span className="student-section-label">CAREER PREPARATION</span>

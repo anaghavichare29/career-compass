@@ -262,7 +262,7 @@ const StudentDashboard = () => {
               <span className="student-section-label">LEARNING</span>
               <h3>Recent Tasks</h3>
             </div>
-            <a href="/student/tasks">View All</a>
+            <a href="/student/skill-gap">View Skill Gap</a>
           </div>
 
           {tasksWithStatus.slice(0, 3).map((task) => (

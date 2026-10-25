@@ -39,16 +39,29 @@ const StudentRoadmap = () => {
     const fetchData = async () => {
       try {
         const user = JSON.parse(localStorage.getItem("user"));
+        const selectedCareer = JSON.parse(localStorage.getItem("selectedCareer") || "null");
 
-        const [roadmapRes, careersRes] = await Promise.all([
-          api.get("roadmaps/", { params: { user_id: user?.user_id } }),
+        const params = { user_id: user?.user_id };
+        if (selectedCareer?.career_name) {
+          params.career_name = selectedCareer.career_name;
+        }
+
+        const [careersRes, roadmapRes] = await Promise.all([
           api.get("careers/", { params: { user_id: user?.user_id } }),
+          api.get("roadmaps/", { params }),
         ]);
 
-        setStages(roadmapRes.data);
-        if (careersRes.data.length > 0) {
-          setTopCareerName(careersRes.data[0].career_name);
+        const cList = careersRes.data || [];
+        let initialCareerName = "";
+        if (selectedCareer?.career_name) {
+          initialCareerName = selectedCareer.career_name;
+        } else if (cList.length > 0) {
+          initialCareerName = cList[0].career_name;
+          localStorage.setItem("selectedCareer", JSON.stringify(cList[0]));
         }
+
+        setTopCareerName(initialCareerName);
+        setStages(roadmapRes.data || []);
       } catch (err) {
         console.error("Failed to load roadmap:", err);
         setError("Could not load your roadmap right now.");
@@ -132,7 +145,7 @@ const StudentRoadmap = () => {
           <h1>Career Roadmap</h1>
           <p>
             Follow a personalized path to build the skills, experience and
-            confidence required for your recommended career.
+            confidence required for your chosen career track.
           </p>
         </section>
 
@@ -145,8 +158,8 @@ const StudentRoadmap = () => {
               <span className="roadmap-small-label">TARGET CAREER</span>
               <h2>{topCareerName || "Your Career Path"}</h2>
               <p>
-                Your roadmap combines your career recommendation, skill gaps and
-                learning progress into a structured career path.
+                Your roadmap combines your <strong>{topCareerName}</strong> milestones, skill gaps and
+                learning progress into a tailored career development progression.
               </p>
             </div>
           </div>
@@ -176,11 +189,14 @@ const StudentRoadmap = () => {
             <div className="ai-roadmap-title-row">
               <div>
                 <span className="ai-label">AI PERSONALIZATION</span>
-                <h2>{aiRoadmapInsight.title}</h2>
+                <h2>Personalized for {topCareerName || "Your Career Track"}</h2>
               </div>
               <span className="ai-ready-badge">AI Ready</span>
             </div>
-            <p>{aiRoadmapInsight.message}</p>
+            <p>
+              Your roadmap has been specifically generated for {topCareerName || "this career"}.
+              Each stage provides milestone durations and focuses on the technical skills you need to become job-ready.
+            </p>
             <span className="ai-updated">
               <i className="bi bi-clock"></i>
               {aiRoadmapInsight.updated}
@@ -207,7 +223,7 @@ const StudentRoadmap = () => {
                     <i className="bi bi-database"></i>
                   </div>
                   <div>
-                    <span>Recommended focus</span>
+                    <span>Recommended focus for {topCareerName}</span>
                     <h3>{nextBestSkill.name}</h3>
                     <p>
                       This skill is part of your {nextBestSkill.stageName} stage
@@ -233,7 +249,7 @@ const StudentRoadmap = () => {
                   </span>
                   <button
                     className="student-primary-btn"
-                    onClick={() => (window.location.href = "/student/tasks")}
+                    onClick={() => (window.location.href = "/student/learning-workspace")}
                   >
                     Start Learning
                     <i className="bi bi-arrow-right"></i>
@@ -380,7 +396,7 @@ const StudentRoadmap = () => {
                   {stage.status === "current" ? (
                     <button
                       className="student-primary-btn"
-                      onClick={() => (window.location.href = "/student/tasks")}
+                      onClick={() => (window.location.href = "/student/learning-workspace")}
                     >
                       Continue Learning
                       <i className="bi bi-arrow-right"></i>
@@ -425,9 +441,9 @@ const StudentRoadmap = () => {
 
           <button
             className="insight-action-btn"
-            onClick={() => (window.location.href = "/student/tasks")}
+            onClick={() => (window.location.href = "/student/learning-workspace")}
           >
-            View Tasks
+            Start Learning
             <i className="bi bi-arrow-right"></i>
           </button>
         </section>
@@ -461,9 +477,9 @@ const StudentRoadmap = () => {
           </div>
           <button
             className="student-primary-btn"
-            onClick={() => (window.location.href = "/student/tasks")}
+            onClick={() => (window.location.href = "/student/learning-workspace")}
           >
-            View My Tasks
+            Open Learning Workspace
             <i className="bi bi-arrow-right"></i>
           </button>
         </section>

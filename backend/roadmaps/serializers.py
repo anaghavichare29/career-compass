@@ -36,4 +36,4 @@ class RoadmapStageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = RoadmapStage
-        fields = ['id', 'name', 'description', 'duration', 'status', 'order', 'skills']
+        fields = ['id', 'career_name', 'name', 'description', 'duration', 'status', 'order', 'skills']

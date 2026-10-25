@@ -23,9 +23,14 @@ const StudentSidebar = () => {
       icon: "bi-map",
     },
     {
-      name: "Tasks",
-      path: "/student/tasks",
-      icon: "bi-check2-square",
+      name: "Learning Workspace",
+      path: "/student/learning-workspace",
+      icon: "bi-mortarboard",
+    },
+    {
+      name: "Mentor Chat",
+      path: "/student/mentor-chat",
+      icon: "bi-chat-dots",
     },
     {
       name: "Quizzes",
@@ -53,6 +58,7 @@ const StudentSidebar = () => {
       icon: "bi-trophy",
     },
   ];
+
 
   const currentPath = window.location.pathname;
 

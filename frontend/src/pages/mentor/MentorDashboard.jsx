@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import api from "../../services/api";
 import MentorSidebar from "../../components/mentor/MentorSidebar";
 import MentorNavbar from "../../components/mentor/MentorNavbar";
@@ -27,6 +27,15 @@ const MentorDashboard = () => {
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [replyText, setReplyText] = useState("");
   const [actionNote, setActionNote] = useState("");
+  const [selectedReviewRequest, setSelectedReviewRequest] = useState(null);
+
+  // Student Chat Modal
+  const [chatStudent, setChatStudent] = useState(null);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatText, setChatText] = useState("");
+  const [chatSending, setChatSending] = useState(false);
+  const [chatLoading, setChatLoading] = useState(false);
+  const chatBottomRef = useRef(null);
 
   // Assign Task Form
   const [taskStudentId, setTaskStudentId] = useState("");
@@ -192,6 +201,77 @@ const MentorDashboard = () => {
       alert("Could not load student progress details.");
     }
   };
+
+  const handleOpenStudentChat = async (student) => {
+    const studentId = student.studentId || student.otherId || student.userId || student.user_id;
+    const studentName = student.name || student.otherName || `Student #${studentId}`;
+    setChatStudent({ id: studentId, name: studentName });
+    setChatLoading(true);
+    try {
+      const res = await api.get("mentorship/messages/", {
+        params: { user_id: user.user_id, mentor_id: studentId },
+      });
+      setChatMessages(res.data || []);
+    } catch (err) {
+      console.error("Failed to load student chat:", err);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  const handleSendMentorMessage = async (e) => {
+    e.preventDefault();
+    if (!chatText.trim() || !chatStudent || chatSending) return;
+    const msg = chatText.trim();
+    setChatText("");
+    setChatSending(true);
+
+    const tempMsg = {
+      id: `temp-${Date.now()}`,
+      sender_id: user.user_id,
+      receiver_id: chatStudent.id,
+      message: msg,
+      created_at: new Date().toISOString(),
+      is_read: false,
+    };
+    setChatMessages((prev) => [...prev, tempMsg]);
+
+    try {
+      await api.post("mentorship/messages/send/", {
+        sender_id: user.user_id,
+        receiver_id: chatStudent.id,
+        message: msg,
+      });
+      const res = await api.get("mentorship/messages/", {
+        params: { user_id: user.user_id, mentor_id: chatStudent.id },
+      });
+      setChatMessages(res.data || []);
+    } catch (err) {
+      console.error("Failed to send message:", err);
+      alert("Failed to send message. Please try again.");
+    } finally {
+      setChatSending(false);
+    }
+  };
+
+  useEffect(() => {
+    chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
+
+  useEffect(() => {
+    if (!chatStudent) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await api.get("mentorship/messages/", {
+          params: { user_id: user.user_id, mentor_id: chatStudent.id },
+        });
+        setChatMessages(res.data || []);
+      } catch (err) {
+        // silent
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [chatStudent]);
 
   const handleAssignTask = async (e) => {
     e.preventDefault();
@@ -459,6 +539,13 @@ const MentorDashboard = () => {
                           <small style={{ color: "#94a3b8", fontSize: "11px" }}>{r.createdAt}</small>
                         </div>
                         <div style={{ display: "flex", gap: "6px" }}>
+                          <button
+                            className="mentor-action-btn outline"
+                            onClick={() => setSelectedReviewRequest(r)}
+                            title="View student profile, recommended careers & topic"
+                          >
+                            <i className="bi bi-person-lines-fill"></i> View
+                          </button>
                           {r.status === "pending" ? (
                             <>
                               <button className="mentor-action-btn success" onClick={() => handleRequestAction(r.id, "approved")}>Approve</button>
@@ -586,6 +673,13 @@ const MentorDashboard = () => {
                         <td style={{ fontSize: "12px", color: "#64748b" }}>{r.createdAt}</td>
                         <td>
                           <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                            <button
+                              className="mentor-action-btn outline"
+                              onClick={() => setSelectedReviewRequest(r)}
+                              title="View student profile, recommended careers & topic"
+                            >
+                              <i className="bi bi-person-lines-fill"></i> View Profile
+                            </button>
                             {r.status === "pending" && (
                               <>
                                 <button className="mentor-action-btn success" onClick={() => handleRequestAction(r.id, "approved")}>Approve</button>
@@ -672,12 +766,20 @@ const MentorDashboard = () => {
                           </div>
                         </td>
                         <td>
-                          <button
-                            className="mentor-action-btn primary"
-                            onClick={() => handleViewStudentProgress(st.studentId)}
-                          >
-                            <i className="bi bi-bar-chart"></i> Analyze Progress
-                          </button>
+                          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                            <button
+                              className="mentor-action-btn primary"
+                              onClick={() => handleViewStudentProgress(st.studentId)}
+                            >
+                              <i className="bi bi-bar-chart"></i> Progress
+                            </button>
+                            <button
+                              className="mentor-action-btn outline"
+                              onClick={() => handleOpenStudentChat(st)}
+                            >
+                              <i className="bi bi-chat-dots"></i> Chat
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1545,6 +1647,331 @@ const MentorDashboard = () => {
               <button type="button" className="mentor-action-btn danger" onClick={() => handleReviewQuiz("rejected")}>Reject Quiz</button>
               <button type="button" className="mentor-action-btn success" onClick={() => handleReviewQuiz("approved")}>Approve & Post Quiz</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================
+          MODAL: STUDENT PROFILE & GUIDANCE TOPIC REVIEW
+      ========================================================= */}
+      {selectedReviewRequest && (
+        <div className="mentor-modal-overlay" onClick={() => setSelectedReviewRequest(null)}>
+          <div
+            className="mentor-modal"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: "760px", width: "95%", maxHeight: "90vh", overflowY: "auto", padding: "28px" }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "18px", borderBottom: "1px solid #e2e8f0", paddingBottom: "14px" }}>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <div style={{ width: "44px", height: "44px", borderRadius: "10px", background: "linear-gradient(135deg, #2563eb, #7c3aed)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "700", fontSize: "18px" }}>
+                    {selectedReviewRequest.otherName?.charAt(0)?.toUpperCase() || "S"}
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: "20px", color: "#0f172a" }}>{selectedReviewRequest.otherName}</h3>
+                    <p style={{ margin: 0, fontSize: "13px", color: "#64748b" }}>
+                      {selectedReviewRequest.studentProfile?.email || "Student"} • Request ID #{selectedReviewRequest.id}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedReviewRequest(null)}
+                style={{ background: "none", border: "none", fontSize: "22px", cursor: "pointer", color: "#94a3b8" }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Student Academic & Contact details */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px", background: "#f8fafc", padding: "14px", borderRadius: "10px", border: "1px solid #e2e8f0", marginBottom: "18px" }}>
+              <div>
+                <small style={{ color: "#64748b", display: "block" }}>College / Institution</small>
+                <strong style={{ fontSize: "13px", color: "#1e293b" }}>{selectedReviewRequest.studentProfile?.college || "Not specified"}</strong>
+              </div>
+              <div>
+                <small style={{ color: "#64748b", display: "block" }}>Course & Year</small>
+                <strong style={{ fontSize: "13px", color: "#1e293b" }}>
+                  {selectedReviewRequest.studentProfile?.course || "Undergraduate"} {selectedReviewRequest.studentProfile?.year ? `(${selectedReviewRequest.studentProfile.year})` : ""}
+                </strong>
+              </div>
+              <div>
+                <small style={{ color: "#64748b", display: "block" }}>Academic Score / CGPA</small>
+                <strong style={{ fontSize: "13px", color: "#2563eb" }}>{selectedReviewRequest.studentProfile?.academicScore || "N/A"}</strong>
+              </div>
+              <div>
+                <small style={{ color: "#64748b", display: "block" }}>Location</small>
+                <strong style={{ fontSize: "13px", color: "#1e293b" }}>{selectedReviewRequest.studentProfile?.location || "India"}</strong>
+              </div>
+            </div>
+
+            {/* Bio / Summary if available */}
+            {selectedReviewRequest.studentProfile?.bio && (
+              <div style={{ marginBottom: "16px" }}>
+                <label style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: "700", color: "#64748b" }}>About Student</label>
+                <p style={{ margin: "4px 0 0", fontSize: "13px", color: "#334155", background: "#ffffff", padding: "10px 12px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                  {selectedReviewRequest.studentProfile.bio}
+                </p>
+              </div>
+            )}
+
+            {/* Current Student Skills */}
+            <div style={{ marginBottom: "18px" }}>
+              <label style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: "700", color: "#64748b" }}>Current Known Skills</label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "6px" }}>
+                {selectedReviewRequest.studentProfile?.skills && (Array.isArray(selectedReviewRequest.studentProfile.skills) ? selectedReviewRequest.studentProfile.skills : String(selectedReviewRequest.studentProfile.skills).split(",")).length > 0 ? (
+                  (Array.isArray(selectedReviewRequest.studentProfile.skills) ? selectedReviewRequest.studentProfile.skills : String(selectedReviewRequest.studentProfile.skills).split(",")).map((sk, idx) => (
+                    <span key={idx} style={{ background: "#e0f2fe", color: "#0369a1", fontSize: "12px", padding: "4px 10px", borderRadius: "14px", fontWeight: "600" }}>
+                      {typeof sk === "string" ? sk.trim() : sk}
+                    </span>
+                  ))
+                ) : (
+                  <span style={{ fontSize: "13px", color: "#94a3b8" }}>No skills listed yet</span>
+                )}
+              </div>
+            </div>
+
+            {/* Guidance Requested Details */}
+            <div style={{ background: "#fffbeb", border: "1px solid #fef3c7", padding: "14px", borderRadius: "10px", marginBottom: "18px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+                <i className="bi bi-compass" style={{ color: "#d97706", fontSize: "16px" }}></i>
+                <span style={{ fontSize: "12px", fontWeight: "700", color: "#92400e", textTransform: "uppercase" }}>Requested Guidance Topic</span>
+              </div>
+              <h4 style={{ margin: "0 0 8px 0", color: "#b45309", fontSize: "15px" }}>{selectedReviewRequest.topic}</h4>
+              
+              <div style={{ fontSize: "13px", color: "#78350f", marginBottom: "8px" }}>
+                <strong>Student's Message:</strong>
+                <p style={{ margin: "4px 0", whiteSpace: "pre-wrap" }}>{selectedReviewRequest.message || "No specific message provided."}</p>
+              </div>
+
+              {selectedReviewRequest.goals && (
+                <div style={{ fontSize: "13px", color: "#78350f" }}>
+                  <strong>Specific Goals:</strong> {selectedReviewRequest.goals}
+                </div>
+              )}
+            </div>
+
+            {/* Recommended Careers & Skill Gaps */}
+            <div style={{ marginBottom: "20px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                <label style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: "700", color: "#64748b" }}>
+                  Recommended Career Paths & Skill Analysis
+                </label>
+                <span style={{ fontSize: "12px", color: "#64748b" }}>Generated from Assessment</span>
+              </div>
+
+              {selectedReviewRequest.recommendedCareers && selectedReviewRequest.recommendedCareers.length > 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  {selectedReviewRequest.recommendedCareers.map((rec, idx) => (
+                    <div key={idx} style={{ border: "1px solid #e2e8f0", borderRadius: "10px", padding: "12px 14px", background: "#ffffff" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <i className="bi bi-briefcase text-primary"></i>
+                          <strong style={{ fontSize: "14px", color: "#0f172a" }}>{rec.career}</strong>
+                        </div>
+                        <span style={{ background: rec.matchPercentage >= 75 ? "#dcfce7" : "#fef3c7", color: rec.matchPercentage >= 75 ? "#15803d" : "#b45309", padding: "3px 10px", borderRadius: "12px", fontSize: "12px", fontWeight: "700" }}>
+                          {rec.matchPercentage}% Match
+                        </span>
+                      </div>
+
+                      {rec.matchedSkills && rec.matchedSkills.length > 0 && (
+                        <div style={{ fontSize: "12px", color: "#166534", marginTop: "6px" }}>
+                          <span style={{ fontWeight: "600" }}>✓ Matched Skills: </span>
+                          {rec.matchedSkills.join(", ")}
+                        </div>
+                      )}
+
+                      {rec.missingSkills && rec.missingSkills.length > 0 && (
+                        <div style={{ fontSize: "12px", color: "#b91c1c", marginTop: "4px" }}>
+                          <span style={{ fontWeight: "600" }}>⚠ Skill Gaps to Bridge: </span>
+                          {rec.missingSkills.join(", ")}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ padding: "12px", background: "#f8fafc", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "13px", color: "#64748b" }}>
+                  Student has not completed the career recommendation assessment yet.
+                </div>
+              )}
+            </div>
+
+            {/* Action Footer */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #e2e8f0", paddingTop: "16px", flexWrap: "wrap", gap: "10px" }}>
+              <button
+                type="button"
+                className="mentor-action-btn outline"
+                onClick={() => {
+                  const req = selectedReviewRequest;
+                  setSelectedReviewRequest(null);
+                  handleOpenStudentChat({ studentId: req.otherId, name: req.otherName });
+                }}
+              >
+                <i className="bi bi-chat-dots"></i> Message Student
+              </button>
+
+              <div style={{ display: "flex", gap: "8px" }}>
+                {selectedReviewRequest.status === "pending" && (
+                  <>
+                    <button
+                      type="button"
+                      className="mentor-action-btn danger"
+                      onClick={() => {
+                        const id = selectedReviewRequest.id;
+                        setSelectedReviewRequest(null);
+                        handleRequestAction(id, "rejected");
+                      }}
+                    >
+                      Reject Request
+                    </button>
+                    <button
+                      type="button"
+                      className="mentor-action-btn success"
+                      onClick={() => {
+                        const id = selectedReviewRequest.id;
+                        setSelectedReviewRequest(null);
+                        handleRequestAction(id, "approved");
+                      }}
+                    >
+                      <i className="bi bi-check-circle"></i> Approve Request
+                    </button>
+                  </>
+                )}
+                <button
+                  type="button"
+                  className="mentor-action-btn primary"
+                  onClick={() => {
+                    const req = selectedReviewRequest;
+                    setSelectedReviewRequest(null);
+                    setSelectedRequest(req);
+                    setReplyText(req.reply || "");
+                  }}
+                >
+                  {selectedReviewRequest.reply ? "Edit Reply" : "Send Reply"}
+                </button>
+                <button
+                  type="button"
+                  className="mentor-action-btn outline"
+                  onClick={() => setSelectedReviewRequest(null)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================
+          MODAL: REAL-TIME STUDENT CHAT
+      ========================================================= */}
+      {chatStudent && (
+        <div className="mentor-modal-overlay" onClick={() => setChatStudent(null)}>
+          <div
+            className="mentor-modal"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: "560px", width: "95%", height: "600px", display: "flex", flexDirection: "column", padding: 0, overflow: "hidden" }}
+          >
+            {/* Chat Header */}
+            <div style={{ padding: "16px 20px", background: "linear-gradient(135deg, #1e293b, #0f172a)", color: "#ffffff", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div style={{ width: "38px", height: "38px", borderRadius: "50%", background: "#2563eb", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "700" }}>
+                  {chatStudent.name?.charAt(0)?.toUpperCase() || "S"}
+                </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: "16px", color: "#ffffff" }}>{chatStudent.name}</h4>
+                  <small style={{ color: "#94a3b8", display: "flex", alignItems: "center", gap: "6px" }}>
+                    <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#10b981", display: "inline-block" }}></span>
+                    Student Mentorship Chat
+                  </small>
+                </div>
+              </div>
+              <button
+                onClick={() => setChatStudent(null)}
+                style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: "20px", cursor: "pointer" }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Messages area */}
+            <div style={{ flex: 1, padding: "18px", overflowY: "auto", background: "#f8fafc", display: "flex", flexDirection: "column", gap: "12px" }}>
+              {chatLoading ? (
+                <div style={{ textAlign: "center", color: "#64748b", margin: "auto" }}>Loading conversation...</div>
+              ) : chatMessages.length === 0 ? (
+                <div style={{ textAlign: "center", color: "#94a3b8", margin: "auto" }}>
+                  <i className="bi bi-chat-square-text" style={{ fontSize: "32px", display: "block", marginBottom: "8px", opacity: 0.5 }}></i>
+                  No messages yet. Send a message to start guidance!
+                </div>
+              ) : (
+                chatMessages.map((m) => {
+                  const isMe = Number(m.sender_id) === Number(user.user_id);
+                  return (
+                    <div
+                      key={m.id}
+                      style={{
+                        alignSelf: isMe ? "flex-end" : "flex-start",
+                        maxWidth: "80%",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: isMe ? "flex-end" : "flex-start",
+                      }}
+                    >
+                      <div
+                        style={{
+                          padding: "10px 14px",
+                          borderRadius: isMe ? "14px 14px 2px 14px" : "14px 14px 14px 2px",
+                          background: isMe ? "#2563eb" : "#ffffff",
+                          color: isMe ? "#ffffff" : "#0f172a",
+                          boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+                          border: isMe ? "none" : "1px solid #e2e8f0",
+                          fontSize: "14px",
+                          lineHeight: "1.45",
+                          wordBreak: "break-word",
+                        }}
+                      >
+                        {m.message}
+                      </div>
+                      <small style={{ color: "#94a3b8", fontSize: "10px", marginTop: "4px" }}>
+                        {m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""}
+                      </small>
+                    </div>
+                  );
+                })
+              )}
+              <div ref={chatBottomRef} />
+            </div>
+
+            {/* Input area */}
+            <form onSubmit={handleSendMentorMessage} style={{ padding: "12px 16px", background: "#ffffff", borderTop: "1px solid #e2e8f0", display: "flex", gap: "8px", alignItems: "center" }}>
+              <input
+                type="text"
+                value={chatText}
+                onChange={(e) => setChatText(e.target.value)}
+                placeholder={`Message ${chatStudent.name}...`}
+                style={{ flex: 1, padding: "10px 14px", borderRadius: "22px", border: "1px solid #cbd5e1", fontSize: "14px", outline: "none" }}
+              />
+              <button
+                type="submit"
+                disabled={!chatText.trim() || chatSending}
+                style={{
+                  background: "#2563eb",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "50%",
+                  width: "40px",
+                  height: "40px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: !chatText.trim() || chatSending ? "not-allowed" : "pointer",
+                  opacity: !chatText.trim() || chatSending ? 0.6 : 1,
+                }}
+              >
+                <i className="bi bi-send-fill" style={{ fontSize: "14px" }}></i>
+              </button>
+            </form>
           </div>
         </div>
       )}

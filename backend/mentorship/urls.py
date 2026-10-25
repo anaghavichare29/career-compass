@@ -13,6 +13,8 @@ from .views import (
     MentorAssignRoadmapView,
     LearningResourcesView,
     MyMentorsView,
+    MentorMessageListView,
+    MentorMessageSendView,
 )
 
 urlpatterns = [
@@ -29,4 +31,7 @@ urlpatterns = [
     path('assign-roadmap/', MentorAssignRoadmapView.as_view(), name='mentorship-assign-roadmap'),
     path('resources/', LearningResourcesView.as_view(), name='mentorship-resources'),
     path('my-mentors/', MyMentorsView.as_view(), name='mentorship-my-mentors'),
+    # Mentor chat messages
+    path('messages/', MentorMessageListView.as_view(), name='mentor-messages-list'),
+    path('messages/send/', MentorMessageSendView.as_view(), name='mentor-messages-send'),
 ]

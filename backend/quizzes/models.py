@@ -34,6 +34,7 @@ class Quiz(models.Model):
     reviewed_by_user_id = models.IntegerField(null=True, blank=True)
     review_notes = models.TextField(blank=True)
 
+    career_name = models.CharField(max_length=150, null=True, blank=True)
     ai_recommended = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 

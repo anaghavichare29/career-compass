@@ -24,7 +24,7 @@ class QuizListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'title', 'description', 'skill', 'difficulty',
             'duration_minutes', 'source', 'status', 'ai_recommended',
-            'created_at', 'status_label', 'question_count',
+            'career_name', 'created_at', 'status_label', 'question_count',
         ]
 
     def get_question_count(self, obj):

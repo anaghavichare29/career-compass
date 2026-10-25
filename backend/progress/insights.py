@@ -83,24 +83,48 @@ def has_taken_assessment(user_id):
     return CareerRecommendation.objects.filter(user_id=user_id).exists()
 
 
-def build_insights(user_id):
-    top_rec = (
-        CareerRecommendation.objects.filter(user_id=user_id)
-        .order_by("-match_percent", "id")
-        .first()
-    )
-    if not top_rec:
+import re
+
+def build_insights(user_id, career_name=None):
+    rec = None
+    if career_name and career_name not in ('undefined', 'null'):
+        clean = str(career_name).strip()
+        rec = CareerRecommendation.objects.filter(user_id=user_id, career_name__iexact=clean).first()
+        if not rec and re.search(r'\b(ui\s*/\s*ux|ux\s*/\s*ui)\b', clean, re.IGNORECASE):
+            rec = CareerRecommendation.objects.filter(user_id=user_id, career_name__iexact="UX/UI Designer").first()
+        if not rec:
+            rec = CareerRecommendation.objects.filter(user_id=user_id, career_name__icontains=clean).first()
+        if not rec:
+            for r in CareerRecommendation.objects.filter(user_id=user_id):
+                if r.career_name.lower() in clean.lower() or clean.lower() in r.career_name.lower():
+                    rec = r
+                    break
+
+    if not rec:
+        rec = (
+            CareerRecommendation.objects.filter(user_id=user_id)
+            .order_by("-match_percent", "id")
+            .first()
+        )
+    if not rec:
         return {"has_data": False}
 
-    career_def = CareerDefinition.objects.filter(name=top_rec.career_name).first()
+    top_rec = rec
+    target_career_name = rec.career_name
+    career_def = CareerDefinition.objects.filter(name__iexact=target_career_name).first()
+    if not career_def and re.search(r'\b(ui\s*/\s*ux|ux\s*/\s*ui)\b', target_career_name, re.IGNORECASE):
+        career_def = CareerDefinition.objects.filter(name__iexact="UX/UI Designer").first()
+    if not career_def:
+        career_def = CareerDefinition.objects.filter(name__icontains=target_career_name).first()
+
     required_skills = career_def.skills_list() if career_def else (
-        _split_csv(top_rec.matched_skills) + _split_csv(top_rec.missing_skills)
+        _split_csv(rec.matched_skills) + _split_csv(rec.missing_skills)
     )
     if not required_skills:
         return {"has_data": False}
 
     # Make sure the roadmap reflects the latest task progress before reading it.
-    sync_roadmap_progress(user_id)
+    sync_roadmap_progress(user_id, career_name=target_career_name)
 
     tasks = list(Task.objects.filter(user_id=user_id))
     task_pct_by_skill = defaultdict(list)
@@ -159,7 +183,7 @@ def build_insights(user_id):
             "title": f"{largest['name']} is currently your highest-priority skill gap",
             "description": (
                 f"You are at {largest['current']}% in {largest['name']} and the target for "
-                f"{top_rec.career_name} is {largest['required']}%. Closing this gap will "
+                f"{target_career_name} is {largest['required']}%. Closing this gap will "
                 f"move your career readiness the most."
             ),
             "recommendation": (
@@ -169,13 +193,15 @@ def build_insights(user_id):
         }
     else:
         skill_insight = {
-            "title": f"You meet every skill target for {top_rec.career_name}",
+            "title": f"You meet every skill target for {target_career_name}",
             "description": "All of your required skills are at or above the recommended level.",
             "recommendation": "Try advanced quizzes or a portfolio project to stand out.",
         }
 
     # ---------- readiness ----------
-    roadmap_skills = list(RoadmapSkill.objects.filter(stage__user_id=user_id))
+    roadmap_skills = list(RoadmapSkill.objects.filter(stage__user_id=user_id, stage__career_name__iexact=target_career_name))
+    if not roadmap_skills:
+        roadmap_skills = list(RoadmapSkill.objects.filter(stage__user_id=user_id))
     learning = round(_avg(rs.progress for rs in roadmap_skills))
     practical = round(_avg(t.percent for t in tasks))
     knowledge = round(_avg(best_by_quiz.values()))
@@ -184,7 +210,7 @@ def build_insights(user_id):
     done_tasks = sum(1 for t in tasks if t.status in ("Completed", "Submitted"))
     categories = [
         {"name": "Technical Skills", "value": overall_skill, "icon": "bi-code-slash", "color": "blue",
-         "description": f"Average proficiency across the {len(skills)} skills {top_rec.career_name} needs"},
+         "description": f"Average proficiency across the {len(skills)} skills {target_career_name} needs"},
         {"name": "Learning Progress", "value": learning, "icon": "bi-book", "color": "purple",
          "description": "Progress across the skills in your career roadmap"},
         {"name": "Practical Experience", "value": practical, "icon": "bi-kanban", "color": "orange",

@@ -5,7 +5,7 @@ import StudentDashboard from "./pages/student/StudentDashboard";
 import StudentAssessment from "./pages/student/StudentAssessment";
 import StudentRecommendations from "./pages/student/StudentRecommendations";
 import StudentRoadmap from "./pages/student/StudentRoadmap";
-import StudentTasks from "./pages/student/StudentTasks";
+import StudentMentorChat from "./pages/student/StudentMentorChat";
 import StudentQuizzes from "./pages/student/StudentQuizzes";
 import StudentSkillGap from "./pages/student/StudentSkillGap";
 import StudentCareerReadiness from "./pages/student/StudentCareerReadiness";
@@ -13,6 +13,7 @@ import StudentProfile from "./pages/student/StudentProfile";
 import StudentProgress from "./pages/student/StudentProgress";
 import StudentIndustryProfessionals from "./pages/student/StudentIndustryProfessionals";
 import StudentProfessionalProfile from "./pages/student/StudentProfessionalProfile";
+import StudentLearningWorkspace from "./pages/student/StudentLearningWorkspace";
 
 import IndustryExperts from "./pages/professional/IndustryExperts";
 import ExpertProfile from "./pages/professional/ExpertProfile";
@@ -57,8 +58,8 @@ function App() {
     return <StudentRoadmap />;
   }
 
-  if (path === "/student/tasks") {
-    return <StudentTasks />;
+  if (path === "/student/mentor-chat") {
+    return <StudentMentorChat />;
   }
 
   if (path === "/student/quizzes") {
@@ -83,6 +84,10 @@ function App() {
 
   if (path === "/student/industry-professionals") {
     return <StudentIndustryProfessionals />;
+  }
+
+  if (path === "/student/learning-workspace") {
+    return <StudentLearningWorkspace />;
   }
 
   if (

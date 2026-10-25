@@ -360,16 +360,21 @@ class GuidanceRequestListView(APIView):
 
                 cursor.execute("""
                     SELECT gr.id, gr.student_id, u.first_name, u.last_name, gr.topic, gr.message,
-                           gr.goals, gr.status, gr.reply, gr.created_at
+                           gr.goals, gr.status, gr.reply, gr.created_at,
+                           s.college, s.course, s.year, s.career_goal, s.academic_score, u.email,
+                           s.bio, s.phone, s.location
                     FROM guidance_requests gr
                     JOIN users u ON gr.student_id = u.user_id
+                    LEFT JOIN students s ON u.user_id = s.user_id
                     WHERE gr.mentor_id = %s OR gr.mentor_id = %s
                     ORDER BY gr.created_at DESC
                 """, [mentor_id, user_id])
             else:
                 cursor.execute("""
                     SELECT gr.id, gr.mentor_id, u.first_name, u.last_name, gr.topic, gr.message,
-                           gr.goals, gr.status, gr.reply, gr.created_at
+                           gr.goals, gr.status, gr.reply, gr.created_at,
+                           NULL, NULL, NULL, NULL, NULL, NULL,
+                           NULL, NULL, NULL
                     FROM guidance_requests gr
                     JOIN professionals p ON gr.mentor_id = p.professional_id
                     JOIN users u ON p.user_id = u.user_id
@@ -379,20 +384,103 @@ class GuidanceRequestListView(APIView):
 
             rows = cursor.fetchall()
 
+        # For mentor role, fetch complete career recommendations and skills for each student
+        student_recommendations = {}
+        student_skills_map = {}
+        if role == "mentor":
+            try:
+                from careers.models import CareerRecommendation
+                student_ids = list({r[1] for r in rows})
+                for sid in student_ids:
+                    recs = CareerRecommendation.objects.filter(user_id=sid).order_by('-match_percent')
+                    student_recommendations[sid] = [
+                        {
+                            "career_name": rec.career_name,
+                            "match_percent": rec.match_percent,
+                            "description": rec.description,
+                            "matched_skills": [s.strip() for s in (rec.matched_skills or '').split(',') if s.strip()],
+                            "missing_skills": [s.strip() for s in (rec.missing_skills or '').split(',') if s.strip()],
+                        }
+                        for rec in recs
+                    ]
+            except Exception:
+                pass
+
+            try:
+                student_ids = list({r[1] for r in rows})
+                with connection.cursor() as s_cursor:
+                    for sid in student_ids:
+                        s_cursor.execute("""
+                            SELECT sk.skill_name, ss.proficiency_level
+                            FROM student_skills ss
+                            JOIN skills sk ON ss.skill_id = sk.skill_id
+                            JOIN students s ON ss.student_id = s.student_id
+                            WHERE s.user_id = %s
+                        """, [sid])
+                        student_skills_map[sid] = [
+                            {"skill": s_row[0], "level": s_row[1]}
+                            for s_row in s_cursor.fetchall()
+                        ]
+            except Exception:
+                pass
+
+        TOPIC_MAP = {
+            "career": "Career Guidance & Transition",
+            "skills": "Skills & Technologies Gap",
+            "projects": "Portfolio & Project Review",
+            "interviews": "Interview Preparation",
+            "industry": "Industry Insights & Expectations",
+            "other": "General Mentorship",
+        }
+
         results = []
         for r in rows:
             other_name = f"{r[2]} {r[3] or ''}".strip()
-            results.append({
+            raw_topic = r[4] or ""
+            topic_display = TOPIC_MAP.get(raw_topic.lower(), raw_topic)
+            entry = {
                 "id": r[0],
                 "otherId": r[1],
                 "otherName": other_name,
-                "topic": r[4],
+                "topic": topic_display,
                 "message": r[5],
                 "goals": r[6] or "",
                 "status": r[7],
                 "reply": r[8] or "",
                 "createdAt": r[9].strftime("%d %b %Y, %I:%M %p") if r[9] else "",
-            })
+            }
+            if role == "mentor":
+                student_id = r[1]
+                raw_recs = student_recommendations.get(student_id, [])
+                recs_list = [
+                    {
+                        **rec,
+                        "career": rec.get("career_name", ""),
+                        "matchPercentage": rec.get("match_percent", 0),
+                        "matchedSkills": rec.get("matched_skills", []),
+                        "missingSkills": rec.get("missing_skills", []),
+                    }
+                    for rec in raw_recs
+                ]
+                top_career = recs_list[0]["career"] if recs_list else ""
+                entry["recommendedCareers"] = recs_list
+                entry["studentProfile"] = {
+                    "studentId": student_id,
+                    "name": other_name,
+                    "email": r[15] or "",
+                    "college": r[10] or "",
+                    "course": r[11] or "",
+                    "year": f"{r[12]}th Year" if r[12] else "",
+                    "careerGoal": r[13] or top_career,
+                    "academicScore": float(r[14]) if r[14] else None,
+                    "bio": r[16] or "",
+                    "phone": r[17] or "",
+                    "location": r[18] or "",
+                    "targetCareer": top_career,
+                    "recommendedCareers": recs_list,
+                    "skills": student_skills_map.get(student_id, []),
+                }
+            results.append(entry)
 
         return Response(results, status=status.HTTP_200_OK)
 
@@ -601,7 +689,8 @@ class MentorStudentsListView(APIView):
                 FROM guidance_requests gr
                 JOIN users u ON gr.student_id = u.user_id
                 LEFT JOIN students s ON u.user_id = s.user_id
-                WHERE gr.mentor_id = %s OR gr.mentor_id = %s
+                WHERE (gr.mentor_id = %s OR gr.mentor_id = %s)
+                  AND LOWER(gr.status) IN ('approved', 'accepted')
                 ORDER BY gr.created_at DESC
             """, [prof_id, mentor_user_id])
             rows = cursor.fetchall()
@@ -683,11 +772,14 @@ class MentorStudentProgressView(APIView):
             "studentId": student_id,
             "name": f"{user.first_name} {user.last_name or ''}".strip(),
             "email": user.email,
-            "college": s_row[0] if s_row else "Technology Institute",
-            "course": s_row[1] if s_row else "Engineering",
+            "phone": s_row[5] if s_row and s_row[5] else "",
+            "location": s_row[6] if s_row and s_row[6] else "",
+            "bio": s_row[4] if s_row and s_row[4] else "",
+            "college": s_row[0] if s_row and s_row[0] else "Technology Institute",
+            "course": s_row[1] if s_row and s_row[1] else "Engineering",
             "year": f"{s_row[2]} Year" if s_row and s_row[2] else "3rd Year",
             "academicScore": float(s_row[3]) if s_row and s_row[3] else 8.5,
-            "careerGoal": s_row[7] if s_row else "Software Engineer",
+            "careerGoal": s_row[7] if s_row and s_row[7] else "Software Engineer",
             "readinessScore": readiness,
             "skillProgress": summary.skill_progress_percent if summary else task_rate,
             "quizAverage": quiz_avg,
@@ -703,6 +795,7 @@ class MentorStudentProgressView(APIView):
                 }
                 for t in tasks
             ],
+
             "recentAttempts": [
                 {
                     "id": a.id,
@@ -896,3 +989,192 @@ class MyMentorsView(APIView):
             return Response({"detail": "A valid user_id is required."}, status=status.HTTP_400_BAD_REQUEST)
         from .services import mentors_for_student
         return Response(mentors_for_student(int(user_id)), status=status.HTTP_200_OK)
+
+
+class MentorMessageListView(APIView):
+    """
+    GET /api/mentorship/messages/?user_id=X&mentor_id=Y
+    Returns the chat messages between a student and their mentor (works bidirectionally).
+    """
+
+    def _ensure_table(self):
+        with connection.cursor() as cursor:
+            try:
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS mentor_messages (
+                        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                        sender_id INT NOT NULL,
+                        receiver_id INT NOT NULL,
+                        message TEXT NOT NULL,
+                        is_read TINYINT(1) NOT NULL DEFAULT 0,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+            except Exception:
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS mentor_messages (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        sender_id INTEGER NOT NULL,
+                        receiver_id INTEGER NOT NULL,
+                        message TEXT NOT NULL,
+                        is_read INTEGER NOT NULL DEFAULT 0,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+
+    def _resolve_user_id(self, val):
+        if val is None:
+            return None
+        try:
+            val_int = int(val)
+        except (ValueError, TypeError):
+            return None
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT user_id FROM professionals WHERE professional_id = %s", [val_int])
+            row = cursor.fetchone()
+            if row:
+                return row[0]
+        return val_int
+
+    def get(self, request):
+        user_id = request.query_params.get("user_id")
+        mentor_id = request.query_params.get("mentor_id")
+
+        if not user_id or not mentor_id:
+            return Response({"detail": "user_id and mentor_id are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            self._ensure_table()
+        except Exception:
+            pass
+
+        uid_a = self._resolve_user_id(user_id)
+        uid_b = self._resolve_user_id(mentor_id)
+        if uid_a is None or uid_b is None:
+            return Response({"detail": "Invalid IDs."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT id, sender_id, receiver_id, message, is_read, created_at
+                    FROM mentor_messages
+                    WHERE (sender_id = %s AND receiver_id = %s)
+                       OR (sender_id = %s AND receiver_id = %s)
+                    ORDER BY created_at ASC
+                """, [uid_a, uid_b, uid_b, uid_a])
+
+                rows = cursor.fetchall()
+
+                # Mark messages sent by uid_b to uid_a as read
+                cursor.execute("""
+                    UPDATE mentor_messages SET is_read = 1
+                    WHERE sender_id = %s AND receiver_id = %s AND is_read = 0
+                """, [uid_b, uid_a])
+
+                messages = [
+                    {
+                        "id": r[0],
+                        "sender_id": r[1],
+                        "receiver_id": r[2],
+                        "message": r[3],
+                        "is_read": bool(r[4]),
+                        "created_at": r[5].isoformat() if hasattr(r[5], 'isoformat') else str(r[5]),
+                    }
+                    for r in rows
+                ]
+                return Response(messages, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response([], status=status.HTTP_200_OK)
+
+
+class MentorMessageSendView(APIView):
+    """
+    POST /api/mentorship/messages/send/
+    Body: { user_id / sender_id, mentor_id / receiver_id, message }
+    Works for both student sending to mentor and mentor sending to student.
+    """
+
+    def _ensure_table(self):
+        with connection.cursor() as cursor:
+            try:
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS mentor_messages (
+                        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                        sender_id INT NOT NULL,
+                        receiver_id INT NOT NULL,
+                        message TEXT NOT NULL,
+                        is_read TINYINT(1) NOT NULL DEFAULT 0,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+            except Exception:
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS mentor_messages (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        sender_id INTEGER NOT NULL,
+                        receiver_id INTEGER NOT NULL,
+                        message TEXT NOT NULL,
+                        is_read INTEGER NOT NULL DEFAULT 0,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+
+    def _resolve_user_id(self, val):
+        if val is None:
+            return None
+        try:
+            val_int = int(val)
+        except (ValueError, TypeError):
+            return None
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT user_id FROM professionals WHERE professional_id = %s", [val_int])
+            row = cursor.fetchone()
+            if row:
+                return row[0]
+        return val_int
+
+    def post(self, request):
+        sender_id = request.data.get("sender_id") or request.data.get("user_id")
+        receiver_id = request.data.get("receiver_id") or request.data.get("mentor_id") or request.data.get("student_id")
+        message = request.data.get("message", "").strip()
+
+        if not sender_id or not receiver_id or not message:
+            return Response(
+                {"detail": "sender_id, receiver_id and message are required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            self._ensure_table()
+        except Exception:
+            pass
+
+        sender_uid = self._resolve_user_id(sender_id)
+        receiver_uid = self._resolve_user_id(receiver_id)
+        if sender_uid is None or receiver_uid is None:
+            return Response({"detail": "Invalid sender or receiver ID."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    INSERT INTO mentor_messages (sender_id, receiver_id, message, is_read)
+                    VALUES (%s, %s, %s, 0)
+                """, [sender_uid, receiver_uid, message])
+
+                # Send in-app notification to receiver
+                try:
+                    cursor.execute("SELECT first_name, last_name, role FROM users WHERE user_id = %s", [sender_uid])
+                    u_row = cursor.fetchone()
+                    sender_name = f"{u_row[0]} {u_row[1] or ''}".strip() if u_row else "Your mentor"
+                    is_sender_mentor = (u_row[2] or "").upper() in ("MENTOR", "PROFESSIONAL") if u_row else False
+                    notif_title = f"New Message from {sender_name}" if not is_sender_mentor else f"Message from Mentor {sender_name}"
+                    cursor.execute("""
+                        INSERT INTO notifications (user_id, title, message, type)
+                        VALUES (%s, %s, %s, 'mentorship')
+                    """, [receiver_uid, notif_title, f"{sender_name}: {message[:120]}"])
+                except Exception:
+                    pass
+
+            return Response({"detail": "Message sent."}, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({"detail": f"Failed to send: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

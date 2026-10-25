@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import StudentLayout from "../../components/student/StudentLayout";
 import api from "../../services/api";
+import CareerPathSelector from "../../components/student/CareerPathSelector";
 import "./StudentSkillGap.css";
 
 const StudentSkillGap = () => {
@@ -8,31 +9,33 @@ const StudentSkillGap = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const user = JSON.parse(localStorage.getItem("user") || "null");
-        const userId = user?.user_id;
+  const loadSkillGap = async (careerOverride = null) => {
+    try {
+      setLoading(true);
+      const user = JSON.parse(localStorage.getItem("user") || "null");
+      const userId = user?.user_id;
+      const selectedCareer = careerOverride || JSON.parse(localStorage.getItem("selectedCareer") || "null");
 
-        let response;
-        try {
-          response = await api.get("students/skill-gap/", {
-            params: userId ? { user_id: userId } : {},
-          });
-        } catch {
-          response = await api.get("progress/insights/", {
-            params: userId ? { user_id: userId } : {},
-          });
-        }
-        setData(response.data);
-      } catch (err) {
-        console.error("Failed to load skill gap:", err);
-        setError("Could not load your skill gap right now.");
-      } finally {
-        setLoading(false);
+      const params = userId ? { user_id: userId } : {};
+      if (selectedCareer?.career_name) params.career_name = selectedCareer.career_name;
+
+      let response;
+      try {
+        response = await api.get("students/skill-gap/", { params });
+      } catch {
+        response = await api.get("progress/insights/", { params });
       }
-    };
-    load();
+      setData(response.data);
+    } catch (err) {
+      console.error("Failed to load skill gap:", err);
+      setError("Could not load your skill gap right now.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadSkillGap();
   }, []);
 
   if (loading) {
@@ -116,6 +119,7 @@ const StudentSkillGap = () => {
   return (
     <StudentLayout pageTitle="Skill Gap">
       <div className="skill-gap-page">
+        <CareerPathSelector onCareerChange={(career) => loadSkillGap(career)} selectedCareerName={targetCareer} />
 
         <section className="skill-gap-introduction">
           <span className="student-section-label">SKILL ANALYSIS</span>

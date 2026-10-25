@@ -188,111 +188,259 @@ class StudentSkillManageView(APIView):
 
 
 class StudentSkillGapView(APIView):
-    """GET /api/students/skill-gap/?user_id=X"""
+    """GET /api/students/skill-gap/?user_id=X&career_name=Y"""
 
     def get(self, request):
         user_id = request.query_params.get("user_id")
+        career_name = request.query_params.get("career_name")
         if not user_id or not str(user_id).isdigit():
             return Response({"detail": "A valid user_id is required."}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(build_insights(int(user_id)), status=status.HTTP_200_OK)
+        return Response(build_insights(int(user_id), career_name=career_name), status=status.HTTP_200_OK)
 
 
 class StudentCareerReadinessView(APIView):
-    """GET /api/students/career-readiness/?user_id=X"""
+    """GET /api/students/career-readiness/?user_id=X&career_name=Y"""
 
     def get(self, request):
         user_id = request.query_params.get("user_id")
+        career_name = request.query_params.get("career_name")
         if not user_id or not str(user_id).isdigit():
             return Response({"detail": "A valid user_id is required."}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(build_insights(int(user_id)), status=status.HTTP_200_OK)
+        return Response(build_insights(int(user_id), career_name=career_name), status=status.HTTP_200_OK)
 
 
 class StudentProgressView(APIView):
-    """GET /api/students/progress/?user_id=X"""
+    """GET /api/students/progress/?user_id=X&career_name=Y"""
 
     def get(self, request):
         user_id = request.query_params.get("user_id")
+        career_name = request.query_params.get("career_name")
         if not user_id:
             return Response({"detail": "user_id is required."}, status=status.HTTP_400_BAD_REQUEST)
 
-        sync_roadmap_progress(user_id)
+        norm_career = None
+        if career_name and career_name not in ('undefined', 'null', ''):
+            from quizzes.generator import normalize_career_name
+            norm_career = normalize_career_name(career_name)
 
-        stages = RoadmapStage.objects.filter(user_id=user_id).order_by('order')
-        tasks = Task.objects.filter(user_id=user_id)
-        quizzes = Quiz.objects.filter(user_id=user_id, status='approved')
-        attempts = QuizAttempt.objects.filter(user_id=user_id).order_by('-completed_at')
+        if not norm_career:
+            top_rec = CareerRecommendation.objects.filter(user_id=user_id).order_by("-match_percent", "id").first()
+            if top_rec:
+                norm_career = top_rec.career_name
+            else:
+                first_stage = RoadmapStage.objects.filter(user_id=user_id).first()
+                if first_stage and first_stage.career_name:
+                    norm_career = first_stage.career_name
+                else:
+                    first_career = CareerDefinition.objects.first()
+                    norm_career = first_career.name if first_career else "Software Engineer"
 
-        total_stages = stages.count()
-        roadmap_skills = list(RoadmapSkill.objects.filter(stage__user_id=user_id))
+        career_def = CareerDefinition.objects.filter(name__iexact=norm_career).first()
+        if not career_def:
+            career_def = CareerDefinition.objects.filter(name__icontains=norm_career).first()
+
+        # Ensure roadmap exists for this career track
+        stages_qs = RoadmapStage.objects.filter(user_id=user_id, career_name__iexact=norm_career)
+        if not stages_qs.exists():
+            stages_qs = RoadmapStage.objects.filter(user_id=user_id, career_name__icontains=norm_career)
+        if not stages_qs.exists() and career_def:
+            from roadmaps.services import generate_roadmap_for_user
+            generate_roadmap_for_user(user_id, career_def)
+            stages_qs = RoadmapStage.objects.filter(user_id=user_id, career_name__iexact=norm_career)
+            if not stages_qs.exists():
+                stages_qs = RoadmapStage.objects.filter(user_id=user_id, career_name__icontains=norm_career)
+
+        sync_roadmap_progress(user_id, career_name=norm_career)
+        stages = stages_qs.order_by('order')
+
+        roadmap_skills = list(RoadmapSkill.objects.filter(stage__in=stages).select_related('stage'))
+        career_skill_names = set(s.name.strip().lower() for s in roadmap_skills)
+        if career_def:
+            career_skill_names.update(s.strip().lower() for s in career_def.skills_list())
+
+        # Stage milestones breakdown
+        stage_milestones = []
+        for st in stages:
+            st_skills = [s for s in roadmap_skills if s.stage_id == st.id]
+            st_prog = round(sum(s.progress for s in st_skills) / len(st_skills)) if st_skills else (100 if st.status == 'completed' else 0)
+            st_completed = sum(1 for s in st_skills if s.progress >= 100 or s.status == 'completed')
+            stage_milestones.append({
+                "id": st.id,
+                "name": st.name,
+                "order": st.order,
+                "status": st.status,
+                "duration": st.duration,
+                "description": st.description,
+                "progress": st_prog,
+                "totalSkills": len(st_skills),
+                "completedSkills": st_completed,
+                "skills": [
+                    {"name": s.name, "progress": s.progress, "status": s.status}
+                    for s in st_skills
+                ],
+            })
+
+        # Overall roadmap progress for this career
         roadmap_progress = round(sum(s.progress for s in roadmap_skills) / len(roadmap_skills)) if roadmap_skills else 0
 
-        total_tasks = tasks.count()
-        completed_tasks = tasks.filter(status__in=['Completed', 'Submitted']).count()
-
-        total_quizzes = quizzes.count()
-        quizzes_completed_count = len(set(attempts.values_list('quiz_id', flat=True)))
-
-        avg_score = 0
-        if attempts.exists():
-            avg_score = round(sum((a.score / a.total_questions) * 100 for a in attempts) / attempts.count())
-
+        # Career assessment match profile
         assessment_done = has_taken_assessment(user_id)
-        insights = build_insights(int(user_id)) if assessment_done else {}
+        rec = CareerRecommendation.objects.filter(user_id=user_id, career_name__iexact=norm_career).first()
+        if not rec:
+            rec = CareerRecommendation.objects.filter(user_id=user_id, career_name__icontains=norm_career).first()
+        if not rec:
+            for r in CareerRecommendation.objects.filter(user_id=user_id):
+                if r.career_name.lower() in norm_career.lower() or norm_career.lower() in r.career_name.lower():
+                    rec = r
+                    break
+
+        matched_skills = [s.strip() for s in rec.matched_skills.split(',') if s.strip()] if rec and rec.matched_skills else []
+        missing_skills = [s.strip() for s in rec.missing_skills.split(',') if s.strip()] if rec and rec.missing_skills else []
+        match_percent = rec.match_percent if rec else 0
+        assessment_profile = {
+            "has_assessment": assessment_done and (rec is not None),
+            "career_name": norm_career,
+            "match_percent": match_percent,
+            "description": rec.description if rec else (career_def.description if career_def else ""),
+            "matched_skills": matched_skills,
+            "missing_skills": missing_skills,
+            "total_skills": len(matched_skills) + len(missing_skills),
+        }
+
+        # Tasks specific to this career
+        all_tasks = list(Task.objects.filter(user_id=user_id))
+        if not all_tasks:
+            from tasks.views import _generate_default_tasks_for_user
+            _generate_default_tasks_for_user(user_id)
+            all_tasks = list(Task.objects.filter(user_id=user_id))
+
+        career_tasks = [t for t in all_tasks if t.skill and t.skill.strip().lower() in career_skill_names]
+        if not career_tasks and all_tasks and not career_skill_names:
+            career_tasks = all_tasks
+
+        total_tasks = len(career_tasks)
+        completed_tasks = sum(1 for t in career_tasks if t.status in ['Completed', 'Submitted'])
+        task_percent = round((completed_tasks / total_tasks * 100)) if total_tasks else 0
+
+        # Quizzes and attempts specific to this career
+        all_quizzes = list(Quiz.objects.filter(user_id=user_id, status='approved'))
+        career_quizzes = [
+            q for q in all_quizzes
+            if (q.career_name and (norm_career.lower() in q.career_name.lower() or q.career_name.lower() in norm_career.lower()))
+            or (q.skill and q.skill.strip().lower() in career_skill_names)
+        ]
+        career_quiz_ids = set(q.id for q in career_quizzes)
+
+        all_attempts = list(QuizAttempt.objects.filter(user_id=user_id).select_related('quiz').order_by('-completed_at'))
+        career_attempts = [
+            a for a in all_attempts
+            if a.quiz_id in career_quiz_ids
+            or (a.quiz.career_name and (norm_career.lower() in a.quiz.career_name.lower() or a.quiz.career_name.lower() in norm_career.lower()))
+            or (a.quiz.skill and a.quiz.skill.strip().lower() in career_skill_names)
+        ]
+
+        total_career_quizzes = max(len(career_quizzes), len(career_attempts))
+        quizzes_completed_count = len(set(a.quiz_id for a in career_attempts))
+
+        valid_attempts = [a for a in career_attempts if a.total_questions and a.total_questions > 0]
+        avg_score = round(sum((a.score / a.total_questions) * 100 for a in valid_attempts) / len(valid_attempts)) if valid_attempts else 0
+        passed_quizzes_count = len(set(a.quiz_id for a in valid_attempts if (a.score / a.total_questions) >= 0.7))
+
+        recent_attempts = []
+        for att in career_attempts[:6]:
+            q_title = att.quiz.title if att.quiz and att.quiz.title else "Career Quiz"
+            total_q = att.total_questions if att.total_questions and att.total_questions > 0 else 1
+            pct = round((att.score / total_q) * 100)
+            recent_attempts.append({
+                "quizId": att.quiz_id,
+                "quizTitle": q_title,
+                "skill": att.quiz.skill if att.quiz else "",
+                "score": att.score,
+                "total": total_q,
+                "percent": pct,
+                "passed": pct >= 70,
+                "date": att.completed_at.strftime("%d %b %Y") if att.completed_at else "",
+            })
+
+        # Insights and career readiness
+        insights = build_insights(int(user_id), career_name=norm_career) if assessment_done else {}
         readiness_overall = insights.get("overall", 0)
+
+        # Career specific achievements & milestones
+        stage1_done = stages.filter(order=1, status='completed').exists() or (
+            len(roadmap_skills) > 0 and all(s.progress >= 100 for s in roadmap_skills if s.stage.order == 1)
+        )
 
         achievements = [
             {
-                "title": "Assessment Completed",
-                "description": "Completed common career assessment and received recommendations",
-                "achieved": assessment_done,
-                "icon": "bi-clipboard-check",
+                "id": "assessment_match",
+                "title": f"Assessed for {norm_career}",
+                "description": f"Target aligned with {match_percent}% assessment match" if rec else f"Initial career alignment profile prepared for {norm_career}",
+                "achieved": rec is not None,
+                "icon": "bi-clipboard2-check",
+                "badge": f"{match_percent}% Match" if rec else "Pending",
             },
             {
-                "title": "Roadmap Activated",
-                "description": "Personalized career roadmap generated",
-                "achieved": total_stages > 0,
+                "id": "roadmap_active",
+                "title": f"{norm_career} Roadmap Activated",
+                "description": f"{len(stages)} learning stages sequenced for {norm_career}",
+                "achieved": len(stages) > 0,
                 "icon": "bi-map",
+                "badge": f"{len(stages)} Stages" if len(stages) > 0 else "Locked",
             },
             {
-                "title": "First Quiz Passed",
-                "description": "Scored on your first career knowledge quiz",
-                "achieved": attempts.exists(),
+                "id": "stage1_mastered",
+                "title": "Foundation Milestone",
+                "description": f"Mastered baseline prerequisite skills for {norm_career}",
+                "achieved": stage1_done,
+                "icon": "bi-building-check",
+                "badge": "Stage 1 Done" if stage1_done else "In Progress",
+            },
+            {
+                "id": "quiz_passed",
+                "title": f"{norm_career} Knowledge Verified",
+                "description": f"Passed knowledge assessments on {norm_career} skills ({passed_quizzes_count} passed)",
+                "achieved": passed_quizzes_count >= 1,
                 "icon": "bi-patch-check",
+                "badge": f"{passed_quizzes_count} Passed" if passed_quizzes_count >= 1 else "Not Started",
             },
             {
-                "title": "Task Champion",
-                "description": "Completed 3 or more practical learning tasks",
-                "achieved": completed_tasks >= 3,
-                "icon": "bi-trophy",
+                "id": "tasks_champion",
+                "title": f"{norm_career} Practical Champion",
+                "description": f"Completed practical learning coursework for {norm_career} ({completed_tasks} completed)",
+                "achieved": completed_tasks >= 2,
+                "icon": "bi-code-square",
+                "badge": f"{completed_tasks} Tasks" if completed_tasks > 0 else "0 Tasks",
             },
             {
-                "title": "Ready for Industry",
-                "description": "Reached above 75% career readiness score",
+                "id": "industry_ready",
+                "title": f"Job Ready: {norm_career}",
+                "description": f"Attained 75%+ overall career readiness score ({readiness_overall}%)",
                 "achieved": readiness_overall >= 75,
                 "icon": "bi-stars",
+                "badge": f"{readiness_overall}% Ready",
             },
-        ]
-
-        recent_attempts = [
-            {
-                "quizTitle": att.quiz.title,
-                "score": att.score,
-                "total": att.total_questions,
-                "percent": round((att.score / att.total_questions) * 100),
-                "date": att.completed_at.strftime("%d %b %Y"),
-            }
-            for att in attempts[:5]
         ]
 
         return Response({
+            "target_career": norm_career,
+            "targetCareer": norm_career,
             "assessmentCompleted": assessment_done,
+            "assessmentProfile": assessment_profile,
+            "careerSkills": [s.name for s in roadmap_skills] or list(career_skill_names),
             "metrics": {
                 "roadmapProgress": roadmap_progress,
                 "tasksCompleted": f"{completed_tasks} of {total_tasks}",
-                "taskPercent": round((completed_tasks / total_tasks * 100)) if total_tasks else 0,
-                "quizzesCompleted": f"{quizzes_completed_count} of {total_quizzes}",
+                "taskPercent": task_percent,
+                "quizzesCompleted": f"{quizzes_completed_count} of {total_career_quizzes}",
+                "quizzesPassed": passed_quizzes_count,
                 "averageQuizScore": f"{avg_score}%",
+                "readinessScore": readiness_overall,
             },
+            "stageMilestones": stage_milestones,
             "achievements": achievements,
             "recentQuizzes": recent_attempts,
+            "readiness": insights.get("readiness", {}),
+            "skillSummary": insights.get("skill_summary", {}),
+            "categories": insights.get("categories", []),
         }, status=status.HTTP_200_OK)

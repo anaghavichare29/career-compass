@@ -3,24 +3,57 @@ from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.response import Response
 from rest_framework import status
 
+from django.db.models import Q
 from .models import Quiz, QuizQuestion, QuizAttempt
 from .serializers import (
     QuizListSerializer, QuizDetailSerializer, QuizAttemptSerializer,
     QuizReviewListSerializer, MyQuizSubmissionSerializer,
 )
-from .generator import generate_initial_quizzes, generate_quiz_for_skill, get_skills_for_user
+from .generator import (
+    generate_initial_quizzes, generate_quiz_for_skill, get_skills_for_user,
+    normalize_career_name,
+)
 
 INITIAL_QUIZ_COUNT = 10
 
 
 class QuizListView(ListAPIView):
-    """GET /api/quizzes/?user_id=X
+    """GET /api/quizzes/?user_id=X&career_name=Y
     Returns this student's approved quizzes (AI + their own approved ones).
-    Auto-generates the initial 10 the first time this is called."""
+    Auto-generates career-specific quizzes if needed."""
     serializer_class = QuizListSerializer
 
     def get_queryset(self):
         user_id = self.request.query_params.get('user_id')
+        career_name = self.request.query_params.get('career_name')
+        if not user_id:
+            return Quiz.objects.none()
+
+        aptitude_skills = [
+            "General Aptitude", "Logical Reasoning", "Verbal Reasoning",
+            "Quantitative Aptitude", "Numerical Reasoning", "Abstract Reasoning",
+            "Critical Thinking", "Data Interpretation"
+        ]
+
+        if career_name and career_name not in ('undefined', 'null'):
+            resolved_career = normalize_career_name(career_name)
+            has_career_quizzes = Quiz.objects.filter(
+                user_id=user_id,
+                source='ai',
+                career_name__iexact=resolved_career
+            ).exists()
+            if not has_career_quizzes:
+                generate_initial_quizzes(user_id, count=INITIAL_QUIZ_COUNT, career_name=resolved_career)
+
+            return Quiz.objects.filter(
+                Q(user_id=user_id, status='approved') & (
+                    Q(career_name__iexact=resolved_career) |
+                    Q(source='student') |
+                    Q(skill__in=aptitude_skills) |
+                    Q(career_name='Aptitude')
+                )
+            ).order_by('-created_at')
+
         has_any = Quiz.objects.filter(user_id=user_id, source='ai').exists()
         if not has_any and user_id:
             generate_initial_quizzes(user_id, count=INITIAL_QUIZ_COUNT)
@@ -40,32 +73,40 @@ class QuizDetailView(RetrieveAPIView):
 
 
 class GenerateNewQuizView(APIView):
-    """POST /api/quizzes/generate-new/  body: { user_id }
-    Only allowed once the student has completed ALL their current
-    approved AI quizzes."""
+    """POST /api/quizzes/generate-new/  body: { user_id, section, career_name }
+    Generates a new quiz based on section:
+      - section='career': generates a quiz for a career skill
+      - section='aptitude': generates a general aptitude quiz"""
 
     def post(self, request):
         user_id = request.data.get('user_id')
         if not user_id:
             return Response({"detail": "user_id is required."}, status=status.HTTP_400_BAD_REQUEST)
 
-        approved_ai_quizzes = Quiz.objects.filter(user_id=user_id, source='ai', status='approved')
-        completed_quiz_ids = set(
-            QuizAttempt.objects.filter(user_id=user_id).values_list('quiz_id', flat=True)
-        )
+        section = request.data.get('section', 'career').lower()
+        career_name = request.data.get('career_name', '')
+        resolved_career = normalize_career_name(career_name) if career_name else ""
 
-        remaining = [q for q in approved_ai_quizzes if q.id not in completed_quiz_ids]
-        if remaining:
-            return Response(
-                {"detail": f"You still have {len(remaining)} quiz(zes) left to complete before generating a new one."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        skills = get_skills_for_user(user_id) or ["General Aptitude"]
         import random
-        skill = random.choice(skills)
+
+        if section == 'aptitude':
+            aptitude_skills = [
+                "General Aptitude", "Logical Reasoning", "Verbal Reasoning",
+                "Quantitative Aptitude", "Numerical Reasoning", "Abstract Reasoning",
+                "Critical Thinking", "Data Interpretation"
+            ]
+            skill = random.choice(aptitude_skills)
+            quiz_career = "Aptitude"
+        else:
+            # Career section: use career-specific skills
+            skills = get_skills_for_user(user_id, career_name=resolved_career)
+            if not skills and resolved_career:
+                skills = [resolved_career]
+            skill = random.choice(skills) if skills else (resolved_career or "Software Development")
+            quiz_career = resolved_career
+
         try:
-            quiz = generate_quiz_for_skill(user_id, skill, source='ai', status='approved')
+            quiz = generate_quiz_for_skill(user_id, skill, source='ai', status='approved', career_name=quiz_career)
         except Exception as exc:
             return Response(
                 {"detail": "Quiz generation failed. Please try again.", "error": str(exc)},
@@ -281,3 +322,34 @@ class MyQuizAttemptsView(ListAPIView):
     def get_queryset(self):
         user_id = self.request.query_params.get('user_id')
         return QuizAttempt.objects.filter(user_id=user_id)
+
+
+class MiniQuizQuestionsView(APIView):
+    """
+    GET /api/quizzes/mini-quiz/?skill=<skill_name>&user_id=<user_id>&count=8
+    Generates or retrieves authentic, skill-specific questions for Learning Workspace mini quizzes.
+    Includes question, 4 options, and correct_index so the workspace can evaluate answers accurately.
+    """
+
+    def get(self, request):
+        skill = (request.query_params.get("skill") or "").strip()
+        count = int(request.query_params.get("count", 8))
+        if not skill:
+            return Response({"detail": "skill parameter is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 1. Generate questions specifically for this skill via Gemini or fallback bank
+        from .generator import _generate_with_gemini, _build_question_pool_offline
+        questions = _generate_with_gemini(skill, "Intermediate", count=count)
+        if not questions or len(questions) < min(count, 4):
+            questions = _build_question_pool_offline(skill, count=count)
+
+        data = [
+            {
+                "id": idx + 1,
+                "question": q["question"],
+                "options": q["options"],
+                "correct_index": q["correct_index"],
+            }
+            for idx, q in enumerate(questions[:count])
+        ]
+        return Response({"skill": skill, "questions": data}, status=status.HTTP_200_OK)

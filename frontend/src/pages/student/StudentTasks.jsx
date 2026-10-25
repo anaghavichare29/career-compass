@@ -343,7 +343,7 @@ const StudentTasks = () => {
                         }}
                       >
                         <strong style={{ fontSize: "0.85rem", color: "#065f46", display: "block" }}>
-                          <i className="bi bi-chat-heart" style={{ marginRight: "0.3rem" }}></i>
+                          <i className="bi bi-chat-square-quote" style={{ marginRight: "0.3rem" }}></i>
                           Mentor Feedback
                         </strong>
                         <p style={{ margin: "0.2rem 0 0", fontSize: "0.82rem", color: "#047857" }}>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import StudentLayout from "../../components/student/StudentLayout";
 import api from "../../services/api";
+import CareerPathSelector from "../../components/student/CareerPathSelector";
 import "./StudentQuizzes.css";
 
 const StudentQuizzes = () => {
@@ -9,7 +10,10 @@ const StudentQuizzes = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [generating, setGenerating] = useState(false);
+  const [generatingSection, setGeneratingSection] = useState(""); // "career" | "aptitude"
   const [generateMessage, setGenerateMessage] = useState("");
+  const [generateSection, setGenerateSection] = useState("");
+  const [hasAssessment, setHasAssessment] = useState(false);
 
   const [activeFilter, setActiveFilter] = useState("All");
 
@@ -45,12 +49,16 @@ const StudentQuizzes = () => {
 
   const user = JSON.parse(localStorage.getItem("user"));
 
-  const loadData = async () => {
+  const loadData = async (careerOverride = null) => {
     setLoading(true);
     setError("");
     try {
+      const selectedCareer = careerOverride || JSON.parse(localStorage.getItem("selectedCareer") || "null");
+      const quizParams = { user_id: user?.user_id };
+      if (selectedCareer?.career_name) quizParams.career_name = selectedCareer.career_name;
+
       const [quizRes, attemptsRes, submissionsRes, mentorsRes] = await Promise.all([
-        api.get("quizzes/", { params: { user_id: user?.user_id } }),
+        api.get("quizzes/", { params: quizParams }),
         api.get("quizzes/my-attempts/", { params: { user_id: user?.user_id } }),
         api.get("quizzes/my-submissions/", { params: { user_id: user?.user_id } }).catch(() => ({ data: [] })),
         api.get("mentorship/my-mentors/", { params: { user_id: user?.user_id } }).catch(() => ({ data: [] })),
@@ -59,6 +67,15 @@ const StudentQuizzes = () => {
       setAttempts(attemptsRes.data);
       setMySubmissions(submissionsRes.data);
       setMyMentors(mentorsRes.data);
+
+      // Detect if the student has taken the career assessment
+      // (careers endpoint returns data only after assessment)
+      try {
+        const careerRes = await api.get("careers/", { params: { user_id: user?.user_id } });
+        setHasAssessment(careerRes.data && careerRes.data.length > 0);
+      } catch {
+        setHasAssessment(false);
+      }
     } catch (err) {
       console.error("Failed to load quizzes:", err);
       setError("Could not load your quizzes right now.");
@@ -116,11 +133,6 @@ const StudentQuizzes = () => {
   }, [selectedQuiz, quizFinished, isTimeBound]);
 
   const completedQuizIds = new Set(attempts.map((a) => a.quiz));
-  // Matches the backend rule: a new quiz unlocks once every AI quiz has been attempted
-  // (retakes and student-made quizzes don't count against the student).
-  const aiQuizzes = quizzes.filter((q) => q.source === "ai");
-  const remainingAiQuizzes = aiQuizzes.filter((q) => !completedQuizIds.has(q.id));
-  const allCompleted = aiQuizzes.length > 0 && remainingAiQuizzes.length === 0;
 
   const averageScore = attempts.length
     ? Math.round(
@@ -132,12 +144,44 @@ const StudentQuizzes = () => {
 
   const aiRecommendedCount = quizzes.filter((q) => q.ai_recommended).length;
 
-  const filteredQuizzes = quizzes.filter((quiz) => {
-    if (activeFilter === "All") return true;
-    if (activeFilter === "Created by Me") return quiz.source === "student";
-    const status = completedQuizIds.has(quiz.id) ? "Completed" : "Available";
-    return status === activeFilter;
-  });
+  // ── Quiz categorization ────────────────────────────────────────────────────
+  // Career quizzes: tagged as career/skill-based (ai_recommended or skill-matched)
+  // General aptitude: everything else (logical, verbal, quantitative, etc.)
+  const selectedCareerName = (
+    JSON.parse(localStorage.getItem("selectedCareer") || "null")
+  )?.career_name?.toLowerCase() || "";
+
+  const APTITUDE_KEYWORDS = [
+    "aptitude", "logical", "verbal", "quantitative", "general",
+    "reasoning", "numerical", "abstract", "critical", "psychometric",
+  ];
+
+  const isAptitudeQuiz = (q) => {
+    const text = ((q.skill || "") + " " + (q.title || "") + " " + (q.description || "")).toLowerCase();
+    return APTITUDE_KEYWORDS.some((kw) => text.includes(kw)) ||
+      (!q.ai_recommended && !selectedCareerName && q.source === "ai");
+  };
+
+  const allCareerQuizzes = quizzes.filter((q) => !isAptitudeQuiz(q) && q.source !== "student");
+  const allAptitudeQuizzes = quizzes.filter((q) => isAptitudeQuiz(q));
+  const studentQuizzes = quizzes.filter((q) => q.source === "student");
+
+  // Show only 5 general aptitude quizzes
+  const aptitudeQuizzes = allAptitudeQuizzes.slice(0, 5);
+
+  // Sections visible: if assessment taken → career quizzes first, then aptitude
+  //                   if not taken → only aptitude quizzes
+  const careerSection = hasAssessment ? allCareerQuizzes : [];
+  const aptitudeSection = aptitudeQuizzes;
+
+  // Check if all career quizzes are completed (for generate unlock)
+  const careerAiQuizzes = careerSection.filter((q) => q.source === "ai");
+  const remainingCareerQuizzes = careerAiQuizzes.filter((q) => !completedQuizIds.has(q.id));
+  const allCareerCompleted = careerAiQuizzes.length > 0 && remainingCareerQuizzes.length === 0;
+
+  const aptitudeAiQuizzes = aptitudeSection.filter((q) => q.source === "ai");
+  const remainingAptitudeQuizzes = aptitudeAiQuizzes.filter((q) => !completedQuizIds.has(q.id));
+  const allAptitudeCompleted = aptitudeAiQuizzes.length === 0 || remainingAptitudeQuizzes.length === 0;
 
   const initiateQuiz = (quiz) => {
     setQuizToStart(quiz);
@@ -226,11 +270,21 @@ const StudentQuizzes = () => {
     initiateQuiz(selectedQuiz);
   };
 
-  const handleGenerateNew = async () => {
+  const handleGenerateNew = async (section = "career") => {
     setGenerating(true);
+    setGeneratingSection(section);
     setGenerateMessage("");
+    setGenerateSection(section);
     try {
-      const res = await api.post("quizzes/generate-new/", { user_id: user?.user_id });
+      const selectedCareer = JSON.parse(localStorage.getItem("selectedCareer") || "null");
+      const payload = {
+        user_id: user?.user_id,
+        section,
+        ...(section === "career" && selectedCareer?.career_name
+          ? { career_name: selectedCareer.career_name }
+          : {}),
+      };
+      const res = await api.post("quizzes/generate-new/", payload);
       setGenerateMessage(`New quiz ready: ${res.data?.title || "check your quiz list"}`);
       await loadData();
     } catch (err) {
@@ -240,6 +294,7 @@ const StudentQuizzes = () => {
       setGenerateMessage(detail);
     } finally {
       setGenerating(false);
+      setGeneratingSection("");
     }
   };
 
@@ -550,6 +605,8 @@ const StudentQuizzes = () => {
   return (
     <StudentLayout pageTitle="Quizzes">
       <div className="quiz-page">
+        <CareerPathSelector onCareerChange={(career) => loadData(career)} selectedCareerName={selectedCareerName} />
+
         <section className="quiz-introduction">
           <span className="student-section-label">KNOWLEDGE CHECK</span>
           <h1>Career Quizzes</h1>
@@ -606,136 +663,159 @@ const StudentQuizzes = () => {
           </div>
         </section>
 
-        {/* Generate New Quiz Section */}
-        <section className="ai-quiz-card">
-          <div className="ai-quiz-icon">
-            <i className="bi bi-stars"></i>
-          </div>
-
-          <div className="ai-quiz-content">
-            <span className="ai-label">
-              {allCompleted ? "ALL QUIZZES COMPLETED" : "KEEP GOING"}
-            </span>
-            <h2>
-              {allCompleted
-                ? "Ready for a new challenge?"
-                : "Finish your current quizzes to unlock a new one"}
-            </h2>
-            <p>
-              {allCompleted
-                ? "You've completed every quiz available to you. Generate a new 10-question quiz generated via Gemini API."
-                : `You have ${remainingAiQuizzes.length} quiz${remainingAiQuizzes.length === 1 ? "" : "zes"} left before you can generate a new one.`}
-            </p>
-            {generateMessage && (
-              <div className="ai-quiz-reason">
+        {/* ── CAREER QUIZZES SECTION (only when assessment taken) ──────── */}
+        {hasAssessment && (
+          <section className="quiz-section">
+            <div className="quiz-section-header">
+              <div>
+                <span className="student-section-label">CAREER SPECIFIC</span>
+                <h2>Career Quizzes</h2>
+                <p>Quizzes tailored to your selected career path and roadmap skills.</p>
+              </div>
+              <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
+                <button
+                  className="ai-quiz-action"
+                  style={{ fontSize: "0.82rem", padding: "0.5rem 1rem" }}
+                  onClick={() => handleGenerateNew("career")}
+                  disabled={generating && generatingSection === "career"}
+                >
+                  {generating && generatingSection === "career" ? "Generating..." : <><i className="bi bi-stars"></i> Generate New Quiz</>}
+                </button>
+                <button
+                  className="quiz-secondary-button"
+                  onClick={() => setShowCreateModal(true)}
+                >
+                  <i className="bi bi-pencil-square"></i> Create Your Own
+                </button>
+              </div>
+            </div>
+            {generateMessage && generateSection === "career" && (
+              <div className="ai-quiz-reason" style={{ margin: "0 0 1rem" }}>
                 <i className="bi bi-lightbulb"></i>
                 <span>{generateMessage}</span>
               </div>
             )}
-          </div>
+            <div className="quiz-grid">
+              {careerSection.length === 0 ? (
+                <div style={{ padding: "2rem", textAlign: "center", color: "#64748b", gridColumn: "1/-1" }}>
+                  <i className="bi bi-stars" style={{ fontSize: "2rem", display: "block", marginBottom: "0.5rem" }}></i>
+                  <p>No career quizzes yet. Click <strong>Generate New Quiz</strong> to create one for your selected career.</p>
+                </div>
+              ) : careerSection.map((quiz) => {
+                const isCompleted = completedQuizIds.has(quiz.id);
+                return (
+                  <article className="quiz-card" key={quiz.id}>
+                    <div className="quiz-card-top">
+                      <div className="quiz-card-icon"><i className="bi bi-patch-question"></i></div>
+                      {quiz.ai_recommended && (
+                        <span className="quiz-ai-badge"><i className="bi bi-stars"></i> AI Generated</span>
+                      )}
+                      {quiz.source === "student" && (
+                        <span className="quiz-ai-badge" style={{ background: quiz.status === "approved" ? "#ecfdf5" : "#fef3c7", color: quiz.status === "approved" ? "#047857" : "#b45309" }}>
+                          {quiz.status === "approved" ? "Expert Approved" : "Pending Evaluation"}
+                        </span>
+                      )}
+                    </div>
+                    <div className="quiz-card-content">
+                      <span className="quiz-skill">{quiz.skill}</span>
+                      <h3>{quiz.title}</h3>
+                      <p>{quiz.description}</p>
+                      <div className="quiz-meta">
+                        <span><i className="bi bi-question-circle"></i> {quiz.question_count || 10} Questions</span>
+                        <span><i className="bi bi-clock"></i> {quiz.duration_minutes || 15} min</span>
+                        <span><i className="bi bi-bar-chart"></i> {quiz.difficulty}</span>
+                      </div>
+                      <div className="quiz-card-footer">
+                        <span className="quiz-status">{isCompleted ? "Completed" : "Available"}</span>
+                        <button className="quiz-start-button" onClick={() => initiateQuiz(quiz)}>
+                          {isCompleted ? "Retake Quiz" : "Start Quiz"}
+                          <i className="bi bi-arrow-right"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
-          <button
-            className="ai-quiz-action"
-            onClick={handleGenerateNew}
-            disabled={!allCompleted || generating}
-          >
-            {generating ? "Generating..." : "Generate New Quiz"}
-            <i className="bi bi-arrow-right"></i>
-          </button>
-        </section>
-
+        {/* ── GENERAL APTITUDE QUIZZES SECTION ─────────────────────────── */}
         <section className="quiz-section">
           <div className="quiz-section-header">
             <div>
-              <span className="student-section-label">YOUR LEARNING</span>
-              <h2>Available Quizzes</h2>
-              <p>Choose a quiz and select Time-Bound or Self-Paced mode.</p>
+              <span className="student-section-label">GENERAL APTITUDE</span>
+              <h2>General Aptitude Quizzes</h2>
+              <p>
+                {hasAssessment
+                  ? "Build core reasoning and problem-solving skills alongside your career path."
+                  : "Take the career assessment to unlock career-specific quizzes. Complete these to get started."}
+              </p>
             </div>
-
-            <button
-              className="quiz-secondary-button"
-              onClick={() => setShowCreateModal(true)}
-            >
-              <i className="bi bi-send"></i>
-              Create Quiz &amp; Send to Mentor
-            </button>
+            <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
+              <button
+                className="ai-quiz-action"
+                style={{ fontSize: "0.82rem", padding: "0.5rem 1rem" }}
+                onClick={() => handleGenerateNew("aptitude")}
+                disabled={generating && generatingSection === "aptitude"}
+              >
+                {generating && generatingSection === "aptitude" ? "Generating..." : <><i className="bi bi-stars"></i> Generate New Quiz</>}
+              </button>
+              <button
+                className="quiz-secondary-button"
+                onClick={() => setShowCreateModal(true)}
+              >
+                <i className="bi bi-pencil-square"></i> Create Your Own
+              </button>
+            </div>
           </div>
-
-          <div className="quiz-filters">
-            {["All", "Available", "Completed", "Created by Me"].map(
-              (filter) => (
-                <button
-                  key={filter}
-                  className={`quiz-filter-button ${activeFilter === filter ? "active" : ""}`}
-                  onClick={() => setActiveFilter(filter)}
-                >
-                  {filter}
-                </button>
-              ),
-            )}
-          </div>
-
+          {generateMessage && generateSection === "aptitude" && (
+            <div className="ai-quiz-reason" style={{ margin: "0 0 1rem" }}>
+              <i className="bi bi-lightbulb"></i>
+              <span>{generateMessage}</span>
+            </div>
+          )}
+          {!hasAssessment && (
+            <div style={{ padding: "0.75rem 1rem", background: "#eff6ff", borderRadius: "10px", border: "1px solid #bfdbfe", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
+              <i className="bi bi-info-circle" style={{ color: "#2563eb", fontSize: "1.1rem" }}></i>
+              <span style={{ fontSize: "0.87rem", color: "#1e40af" }}>
+                Take the <a href="/student/assessment" style={{ fontWeight: 700, color: "#1d4ed8" }}>Career Assessment</a> to unlock career-specific quizzes personalised to your goals.
+              </span>
+            </div>
+          )}
           <div className="quiz-grid">
-            {filteredQuizzes.map((quiz) => {
+            {aptitudeSection.length === 0 ? (
+              <div style={{ padding: "2rem", textAlign: "center", color: "#64748b", gridColumn: "1/-1" }}>
+                <i className="bi bi-journal-check" style={{ fontSize: "2rem", display: "block", marginBottom: "0.5rem" }}></i>
+                <p>No aptitude quizzes yet. Click <strong>Generate New Quiz</strong> to create one.</p>
+              </div>
+            ) : aptitudeSection.map((quiz) => {
               const isCompleted = completedQuizIds.has(quiz.id);
               return (
                 <article className="quiz-card" key={quiz.id}>
                   <div className="quiz-card-top">
-                    <div className="quiz-card-icon">
-                      <i className="bi bi-patch-question"></i>
-                    </div>
+                    <div className="quiz-card-icon"><i className="bi bi-patch-question"></i></div>
                     {quiz.ai_recommended && (
-                      <span className="quiz-ai-badge">
-                        <i className="bi bi-stars"></i>
-                        AI Generated
-                      </span>
+                      <span className="quiz-ai-badge"><i className="bi bi-stars"></i> AI Generated</span>
                     )}
                     {quiz.source === "student" && (
-                      <span
-                        className="quiz-ai-badge"
-                        style={{
-                          background:
-                            quiz.status === "approved" ? "#ecfdf5" : "#fef3c7",
-                          color:
-                            quiz.status === "approved" ? "#047857" : "#b45309",
-                        }}
-                      >
-                        {quiz.status === "approved"
-                          ? "Expert Approved"
-                          : "Pending Evaluation"}
+                      <span className="quiz-ai-badge" style={{ background: quiz.status === "approved" ? "#ecfdf5" : "#fef3c7", color: quiz.status === "approved" ? "#047857" : "#b45309" }}>
+                        {quiz.status === "approved" ? "Expert Approved" : "Pending Evaluation"}
                       </span>
                     )}
                   </div>
-
                   <div className="quiz-card-content">
                     <span className="quiz-skill">{quiz.skill}</span>
                     <h3>{quiz.title}</h3>
                     <p>{quiz.description}</p>
-
                     <div className="quiz-meta">
-                      <span>
-                        <i className="bi bi-question-circle"></i>
-                        {quiz.question_count || 10} Questions
-                      </span>
-                      <span>
-                        <i className="bi bi-clock"></i>
-                        {quiz.duration_minutes || 15} min
-                      </span>
-                      <span>
-                        <i className="bi bi-bar-chart"></i>
-                        {quiz.difficulty}
-                      </span>
+                      <span><i className="bi bi-question-circle"></i> {quiz.question_count || 10} Questions</span>
+                      <span><i className="bi bi-clock"></i> {quiz.duration_minutes || 15} min</span>
+                      <span><i className="bi bi-bar-chart"></i> {quiz.difficulty}</span>
                     </div>
-
                     <div className="quiz-card-footer">
-                      <span className="quiz-status">
-                        {isCompleted ? "Completed" : "Available"}
-                      </span>
-
-                      <button
-                        className="quiz-start-button"
-                        onClick={() => initiateQuiz(quiz)}
-                      >
+                      <span className="quiz-status">{isCompleted ? "Completed" : "Available"}</span>
+                      <button className="quiz-start-button" onClick={() => initiateQuiz(quiz)}>
                         {isCompleted ? "Retake Quiz" : "Start Quiz"}
                         <i className="bi bi-arrow-right"></i>
                       </button>
@@ -744,14 +824,54 @@ const StudentQuizzes = () => {
                 </article>
               );
             })}
-
-            {filteredQuizzes.length === 0 && (
-              <p style={{ color: "#64748b", padding: "1.5rem" }}>
-                No quizzes match this filter yet.
-              </p>
-            )}
           </div>
         </section>
+
+        {/* ── STUDENT-CREATED QUIZZES ───────────────────────────────────── */}
+        {studentQuizzes.length > 0 && (
+          <section className="quiz-section">
+            <div className="quiz-section-header">
+              <div>
+                <span className="student-section-label">CREATED BY YOU</span>
+                <h2>My Quizzes</h2>
+                <p>Quizzes you created and sent to your mentor for review.</p>
+              </div>
+            </div>
+            <div className="quiz-grid">
+              {studentQuizzes.map((quiz) => {
+                const isCompleted = completedQuizIds.has(quiz.id);
+                return (
+                  <article className="quiz-card" key={quiz.id}>
+                    <div className="quiz-card-top">
+                      <div className="quiz-card-icon"><i className="bi bi-patch-question"></i></div>
+                      <span className="quiz-ai-badge" style={{ background: quiz.status === "approved" ? "#ecfdf5" : "#fef3c7", color: quiz.status === "approved" ? "#047857" : "#b45309" }}>
+                        {quiz.status === "approved" ? "Expert Approved" : "Pending Evaluation"}
+                      </span>
+                    </div>
+                    <div className="quiz-card-content">
+                      <span className="quiz-skill">{quiz.skill}</span>
+                      <h3>{quiz.title}</h3>
+                      <p>{quiz.description}</p>
+                      <div className="quiz-meta">
+                        <span><i className="bi bi-question-circle"></i> {quiz.question_count || 10} Questions</span>
+                        <span><i className="bi bi-clock"></i> {quiz.duration_minutes || 15} min</span>
+                        <span><i className="bi bi-bar-chart"></i> {quiz.difficulty}</span>
+                      </div>
+                      <div className="quiz-card-footer">
+                        <span className="quiz-status">{isCompleted ? "Completed" : quiz.status === "approved" ? "Available" : "Pending Review"}</span>
+                        {quiz.status === "approved" && (
+                          <button className="quiz-start-button" onClick={() => initiateQuiz(quiz)}>
+                            {isCompleted ? "Retake" : "Start Quiz"} <i className="bi bi-arrow-right"></i>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         {/* MODE SELECTION MODAL */}
         {quizToStart && (
